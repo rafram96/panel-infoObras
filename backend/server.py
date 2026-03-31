@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Panel InfoObras API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3002"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

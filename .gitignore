@@ -10,3 +10,4 @@ __pycache__/
 # Frontend
 frontend/.next/
 frontend/node_modules/
+venv/
