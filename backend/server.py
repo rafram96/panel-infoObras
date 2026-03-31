@@ -5,7 +5,7 @@ Llama a motor-OCR como subprocess (caja negra) via subprocess_wrapper.py.
 Parsea stdout en tiempo real para reportar progreso al frontend.
 
 Arrancar desde Panel-InfoObras/backend/:
-    uvicorn server:app --port 8002
+    uvicorn server:app --host 0.0.0.0 --port 8002
 """
 
 import json
@@ -50,9 +50,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Panel InfoObras API")
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:3002").split(",")
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3002"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -239,8 +243,12 @@ def _run_job(job_id: str, pdf_path: Path, pages: Optional[list]) -> None:
                 {
                     "index": s["section_index"],
                     "cargo": s["cargo"],
+                    "cargo_raw": s.get("cargo_raw", s["cargo"]),
                     "numero": s["numero"],
                     "total_pages": s["total_pages"],
+                    "page_numbers": s.get("page_numbers", []),
+                    "bloques": s.get("bloques_origen", []),
+                    "es_tipo_b": s.get("es_tipo_b", False),
                 }
                 for s in raw["secciones"]
             ],

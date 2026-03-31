@@ -15,11 +15,20 @@ interface Job {
   progress_pct: number;
 }
 
+interface Bloque {
+  start: number;
+  end: number;
+}
+
 interface Seccion {
   index: number;
   cargo: string;
+  cargo_raw: string;
   numero: string | null;
   total_pages: number;
+  page_numbers: number[];
+  bloques: Bloque[];
+  es_tipo_b: boolean;
 }
 
 interface JobDetail extends Job {
@@ -65,6 +74,29 @@ function formatSeconds(s: number): string {
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
+/** Compress [1,2,3,5,6,8] → "1–3, 5–6, 8" */
+function compressPages(pages: number[]): string {
+  if (!pages.length) return "—";
+  const sorted = [...pages].sort((a, b) => a - b);
+  const ranges: string[] = [];
+  let start = sorted[0];
+  let end = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === end + 1) {
+      end = sorted[i];
+    } else {
+      ranges.push(start === end ? `${start}` : `${start}–${end}`);
+      start = end = sorted[i];
+    }
+  }
+  ranges.push(start === end ? `${start}` : `${start}–${end}`);
+  return ranges.join(", ");
+}
+
+function bloqueLabel(b: Bloque): string {
+  return b.start === b.end ? `p. ${b.start}` : `pp. ${b.start}–${b.end}`;
+}
+
 // ── Elapsed timer hook ───────────────────────────────────────────────────────
 function useElapsed(createdAt: string | null, active: boolean): number {
   const [elapsed, setElapsed] = useState(0);
@@ -82,11 +114,67 @@ function useElapsed(createdAt: string | null, active: boolean): number {
   return elapsed;
 }
 
+// ── Page map mini visualization ──────────────────────────────────────────────
+function PageMap({
+  section,
+  totalDocPages,
+}: {
+  section: Seccion;
+  totalDocPages: number;
+}) {
+  if (!totalDocPages || !section.page_numbers.length) return null;
+  const pageSet = new Set(section.page_numbers);
+  // Render a compact bar showing where this section's pages are in the document
+  const barWidth = 200;
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="h-2 bg-slate-100 rounded-full overflow-hidden flex-shrink-0"
+        style={{ width: barWidth }}
+        title={`Páginas ${compressPages(section.page_numbers)} de ${totalDocPages}`}
+      >
+        {section.bloques.length > 0
+          ? section.bloques.map((b, i) => {
+              const left = ((b.start - 1) / totalDocPages) * 100;
+              const width =
+                ((b.end - b.start + 1) / totalDocPages) * 100;
+              return (
+                <div
+                  key={i}
+                  className="h-full bg-blue-500 absolute rounded-sm"
+                  style={{
+                    left: `${left}%`,
+                    width: `${Math.max(width, 0.8)}%`,
+                  }}
+                />
+              );
+            })
+          : section.page_numbers.map((p) => {
+              const left = ((p - 1) / totalDocPages) * 100;
+              return (
+                <div
+                  key={p}
+                  className="h-full bg-blue-500 absolute rounded-sm"
+                  style={{
+                    left: `${left}%`,
+                    width: `${Math.max(100 / totalDocPages, 0.8)}%`,
+                  }}
+                />
+              );
+            })}
+      </div>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function Home() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<JobDetail | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(
+    new Set(),
+  );
 
   const [file, setFile] = useState<File | null>(null);
   const [pagesFrom, setPagesFrom] = useState("");
@@ -102,13 +190,24 @@ export default function Home() {
 
   const loadDetail = async (id: string) => {
     const res = await fetch(`/api/jobs/${id}`);
-    if (res.ok) setDetail(await res.json());
+    if (res.ok) {
+      setDetail(await res.json());
+      setExpandedSections(new Set());
+    }
   };
 
-  // Polling: 3s si hay job activo, 10s si no
+  const toggleSection = (idx: number) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  // Polling: 3s if active, 10s otherwise
   useEffect(() => {
     let cancelled = false;
-
     const tick = async () => {
       const res = await fetch("/api/jobs");
       if (!res.ok || cancelled) return;
@@ -127,7 +226,6 @@ export default function Home() {
         if (!cancelled && dRes.ok) setDetail(await dRes.json());
       }
     };
-
     tick();
     const ms = isActive ? 3000 : 10000;
     const interval = setInterval(tick, ms);
@@ -177,13 +275,14 @@ export default function Home() {
   };
 
   const pct = detail?.progress_pct ?? 0;
+  const totalDocPages = detail?.result?.total_pages ?? detail?.doc_total_pages ?? 0;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
             <svg
               className="w-4 h-4 text-white"
@@ -210,7 +309,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* ── Upload form ─────────────────────────────────────────────────── */}
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <h2 className="text-sm font-semibold text-slate-700 mb-4">
@@ -351,9 +450,7 @@ export default function Home() {
                   {detail.pages_from && detail.pages_to
                     ? `pp. ${detail.pages_from}–${detail.pages_to}`
                     : "Todas las páginas"}
-                  {detail.doc_total_pages
-                    ? ` · ${detail.doc_total_pages} págs detectadas`
-                    : ""}
+                  {totalDocPages > 0 && ` · ${totalDocPages} págs detectadas`}
                   {" · "}
                   {detail.created_at}
                 </p>
@@ -366,10 +463,9 @@ export default function Home() {
             </div>
 
             <div className="px-6 py-5 space-y-4">
-              {/* ── Progress bar (pending/running) ──────────────────────────── */}
+              {/* ── Progress bar ──────────────────────────────────────────── */}
               {isActive && (
                 <div className="space-y-3">
-                  {/* Bar */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-500 font-medium">
@@ -386,7 +482,6 @@ export default function Home() {
                                    relative overflow-hidden"
                         style={{ width: `${Math.max(pct, 2)}%` }}
                       >
-                        {/* Shimmer effect */}
                         <div
                           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent
                                      animate-[shimmer_2s_infinite]"
@@ -394,8 +489,6 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Elapsed + info */}
                   <div className="flex items-center gap-4 text-[11px] text-slate-400">
                     <span className="flex items-center gap-1">
                       <svg
@@ -419,7 +512,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* ── Error ────────────────────────────────────────────────────── */}
+              {/* ── Error ────────────────────────────────────────────────── */}
               {detail.status === "error" && (
                 <div className="flex items-start gap-3 bg-red-50 rounded-xl p-4">
                   <svg
@@ -441,7 +534,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* ── Resultado ────────────────────────────────────────────────── */}
+              {/* ── Resultado ────────────────────────────────────────────── */}
               {detail.result && (
                 <>
                   {/* Stats grid */}
@@ -513,50 +606,148 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* Professionals table */}
+                  {/* ── Professionals list ────────────────────────────────── */}
                   {detail.result.secciones.length > 0 ? (
-                    <div className="border border-slate-100 rounded-xl overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-400">
-                            <th className="py-2.5 px-3 text-left font-semibold">
-                              #
-                            </th>
-                            <th className="py-2.5 px-3 text-left font-semibold">
-                              Cargo
-                            </th>
-                            <th className="py-2.5 px-3 text-center font-semibold">
-                              N°
-                            </th>
-                            <th className="py-2.5 px-3 text-center font-semibold">
-                              Págs
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {detail.result.secciones.map((s, i) => (
-                            <tr
-                              key={s.index}
-                              className={`border-t border-slate-50 hover:bg-blue-50/30 transition-colors ${
-                                i % 2 === 0 ? "" : "bg-slate-50/30"
-                              }`}
+                    <div className="space-y-0 border border-slate-100 rounded-xl overflow-hidden">
+                      {/* Table header */}
+                      <div className="grid grid-cols-[2rem_1fr_3rem_4rem_10rem] gap-2 px-4 py-2.5
+                                      bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-400 font-semibold
+                                      border-b border-slate-100">
+                        <span>#</span>
+                        <span>Cargo</span>
+                        <span className="text-center">N°</span>
+                        <span className="text-center">Págs</span>
+                        <span>Ubicación en PDF</span>
+                      </div>
+
+                      {/* Rows */}
+                      {detail.result.secciones.map((s, i) => {
+                        const isExpanded = expandedSections.has(s.index);
+                        return (
+                          <div
+                            key={s.index}
+                            className={`border-b border-slate-50 last:border-0 ${i % 2 === 0 ? "" : "bg-slate-50/30"}`}
+                          >
+                            {/* Main row */}
+                            <div
+                              onClick={() => toggleSection(s.index)}
+                              className="grid grid-cols-[2rem_1fr_3rem_4rem_10rem] gap-2 px-4 py-2.5
+                                         items-center cursor-pointer hover:bg-blue-50/40 transition-colors"
                             >
-                              <td className="py-2 px-3 text-slate-400 tabular-nums text-xs">
+                              <span className="text-xs text-slate-400 tabular-nums">
                                 {s.index}
-                              </td>
-                              <td className="py-2 px-3 font-medium text-slate-800">
-                                {s.cargo}
-                              </td>
-                              <td className="py-2 px-3 text-center text-slate-500">
+                              </span>
+                              <div className="min-w-0">
+                                <span className="text-sm font-medium text-slate-800 truncate block">
+                                  {s.cargo}
+                                </span>
+                                {s.cargo_raw &&
+                                  s.cargo_raw !== s.cargo && (
+                                    <span className="text-[10px] text-slate-400 truncate block">
+                                      {s.cargo_raw}
+                                    </span>
+                                  )}
+                              </div>
+                              <span className="text-sm text-center text-slate-500">
                                 {s.numero ?? "—"}
-                              </td>
-                              <td className="py-2 px-3 text-center tabular-nums text-slate-500">
+                              </span>
+                              <span className="text-sm text-center tabular-nums text-slate-500">
                                 {s.total_pages}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              </span>
+                              {/* Mini page map */}
+                              <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                {s.bloques.length > 0
+                                  ? s.bloques.map((b, bi) => {
+                                      const left =
+                                        ((b.start - 1) / totalDocPages) * 100;
+                                      const width =
+                                        ((b.end - b.start + 1) /
+                                          totalDocPages) *
+                                        100;
+                                      return (
+                                        <div
+                                          key={bi}
+                                          className={`absolute h-full rounded-sm ${
+                                            s.es_tipo_b
+                                              ? "bg-violet-400"
+                                              : "bg-blue-400"
+                                          }`}
+                                          style={{
+                                            left: `${left}%`,
+                                            width: `${Math.max(width, 1)}%`,
+                                          }}
+                                        />
+                                      );
+                                    })
+                                  : s.page_numbers.length > 0 && (
+                                      <div
+                                        className="absolute h-full bg-blue-400 rounded-sm"
+                                        style={{
+                                          left: `${((Math.min(...s.page_numbers) - 1) / totalDocPages) * 100}%`,
+                                          width: `${Math.max(((Math.max(...s.page_numbers) - Math.min(...s.page_numbers) + 1) / totalDocPages) * 100, 1)}%`,
+                                        }}
+                                      />
+                                    )}
+                              </div>
+                            </div>
+
+                            {/* Expanded detail */}
+                            {isExpanded && (
+                              <div className="px-4 pb-3 pt-0 ml-8 space-y-2 animate-[fadeIn_150ms_ease-out]">
+                                {/* Page numbers */}
+                                {s.page_numbers.length > 0 && (
+                                  <div className="text-xs text-slate-500">
+                                    <span className="font-medium text-slate-600">
+                                      Páginas:{" "}
+                                    </span>
+                                    {compressPages(s.page_numbers)}
+                                  </div>
+                                )}
+
+                                {/* Bloques */}
+                                {s.bloques.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {s.bloques.map((b, bi) => (
+                                      <span
+                                        key={bi}
+                                        className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md
+                                          ${
+                                            s.es_tipo_b
+                                              ? "bg-violet-50 text-violet-600"
+                                              : "bg-blue-50 text-blue-600"
+                                          }`}
+                                      >
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                          strokeWidth={2}
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                                          />
+                                        </svg>
+                                        Bloque {bi + 1}: {bloqueLabel(b)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Tipo B indicator */}
+                                {s.es_tipo_b && (
+                                  <p className="text-[11px] text-violet-500">
+                                    Tipo B — páginas distribuidas en{" "}
+                                    {s.bloques.length} bloques del documento
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-slate-400 text-center py-6">
@@ -603,7 +794,6 @@ export default function Home() {
                           : ""}
                         {job.created_at}
                       </p>
-                      {/* Mini progress bar for active jobs in list */}
                       {(job.status === "running" ||
                         job.status === "pending") && (
                         <div className="w-16 h-1 bg-slate-200 rounded-full overflow-hidden">
