@@ -2,16 +2,16 @@
 Backend del Panel InfoObras.
 
 Llama a motor-OCR como subprocess (caja negra) via subprocess_wrapper.py.
+Parsea stdout en tiempo real para reportar progreso al frontend.
 
 Arrancar desde Panel-InfoObras/backend/:
-    uvicorn server:app --port 8000
-
-Requiere .env con MOTOR_OCR_PYTHON y MOTOR_OCR_WRAPPER configurados.
+    uvicorn server:app --port 8002
 """
 
 import json
 import logging
 import os
+import re
 import sqlite3
 import subprocess
 import tempfile
@@ -66,16 +66,30 @@ def _init_db() -> None:
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS jobs (
-                id          TEXT PRIMARY KEY,
-                filename    TEXT NOT NULL,
-                pages_from  INTEGER,
-                pages_to    INTEGER,
-                status      TEXT NOT NULL DEFAULT 'pending',
-                created_at  TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-                result      TEXT,
-                error       TEXT
+                id              TEXT PRIMARY KEY,
+                filename        TEXT NOT NULL,
+                pages_from      INTEGER,
+                pages_to        INTEGER,
+                status          TEXT NOT NULL DEFAULT 'pending',
+                created_at      TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                result          TEXT,
+                error           TEXT,
+                progress_pct    INTEGER DEFAULT 0,
+                progress_stage  TEXT,
+                doc_total_pages INTEGER
             )
         """)
+        # Migración: agregar columnas si la DB ya existía con schema viejo
+        existing = {
+            row[1] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()
+        }
+        for col, typedef in [
+            ("progress_pct", "INTEGER DEFAULT 0"),
+            ("progress_stage", "TEXT"),
+            ("doc_total_pages", "INTEGER"),
+        ]:
+            if col not in existing:
+                conn.execute(f"ALTER TABLE jobs ADD COLUMN {col} {typedef}")
 
 
 _init_db()
@@ -88,15 +102,80 @@ def _update_job(job_id: str, **fields) -> None:
         conn.execute(f"UPDATE jobs SET {sets} WHERE id = ?", values)
 
 
+# ── Progress parser ──────────────────────────────────────────────────────────
+# Parsea los logs de motor-OCR para extraer progreso:
+#   "X páginas a procesar"           → total_pages detectado
+#   "Pasada 1: PaddleOCR"            → etapa Paddle
+#   "Pasada 1 completada en ..."     → Paddle terminó
+#   "Pasada 2: Qwen fallback para X" → etapa Qwen
+#   "Qwen progreso: X/Y (Z%)"       → progreso Qwen
+#   "no se necesita Qwen"            → skip Qwen
+#   "[subprocess_wrapper] OK"        → terminó
+
+_RE_TOTAL_PAGES = re.compile(r"(\d+) páginas a procesar")
+_RE_QWEN_PROGRESS = re.compile(r"Qwen progreso: (\d+)/(\d+) \(([\d.]+)%\)")
+
+
+def _parse_progress(job_id: str, line: str) -> None:
+    """Analiza una línea de log y actualiza el progreso del job."""
+
+    m = _RE_TOTAL_PAGES.search(line)
+    if m:
+        total = int(m.group(1))
+        _update_job(
+            job_id,
+            doc_total_pages=total,
+            progress_stage="Convirtiendo PDF",
+            progress_pct=3,
+        )
+        return
+
+    if "Pasada 1: PaddleOCR" in line:
+        _update_job(job_id, progress_stage="PaddleOCR", progress_pct=8)
+        return
+
+    if "Pasada 1 completada" in line:
+        _update_job(job_id, progress_stage="PaddleOCR completado", progress_pct=55)
+        return
+
+    if "no se necesita Qwen" in line:
+        _update_job(job_id, progress_stage="Segmentación", progress_pct=90)
+        return
+
+    if "Pasada 2: Qwen fallback" in line:
+        _update_job(job_id, progress_stage="Qwen fallback", progress_pct=58)
+        return
+
+    m = _RE_QWEN_PROGRESS.search(line)
+    if m:
+        pct_qwen = float(m.group(3))
+        # Escalar Qwen (0-100%) al rango 58-88% global
+        scaled = 58 + int(pct_qwen * 0.30)
+        current, total = m.group(1), m.group(2)
+        _update_job(
+            job_id,
+            progress_stage=f"Qwen {current}/{total}",
+            progress_pct=min(scaled, 88),
+        )
+        return
+
+    if "segment_document" in line.lower() or "Segmentación" in line:
+        _update_job(job_id, progress_stage="Segmentación", progress_pct=92)
+        return
+
+    if "[subprocess_wrapper] OK" in line:
+        _update_job(job_id, progress_stage="Finalizando", progress_pct=98)
+        return
+
+
 # ── Job runner ────────────────────────────────────────────────────────────────
 def _run_job(job_id: str, pdf_path: Path, pages: Optional[list]) -> None:
-    _update_job(job_id, status="running")
+    _update_job(job_id, status="running", progress_pct=1, progress_stage="Iniciando")
 
     job_output_dir = str(OUTPUT_DIR / job_id)
     args_file = results_file = None
 
     try:
-        # Preparar argumentos para subprocess_wrapper.py
         args = {
             "mode": "segmentation",
             "pdf_path": str(pdf_path),
@@ -115,16 +194,39 @@ def _run_job(job_id: str, pdf_path: Path, pages: Optional[list]) -> None:
             results_file = f.name
 
         logger.info("Job %s: llamando a motor-OCR...", job_id)
-        subprocess.run(
+
+        # Popen para leer stdout en tiempo real y parsear progreso
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        process = subprocess.Popen(
             [MOTOR_OCR_PYTHON, MOTOR_OCR_WRAPPER, args_file, results_file],
-            check=True,
-            timeout=9000,  # 2.5 horas — documentos grandes toman hasta 1h40m
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env=env,
         )
+
+        for raw_line in process.stdout:
+            line = raw_line.strip()
+            if not line:
+                continue
+            logger.info("Job %s | %s", job_id, line)
+            try:
+                _parse_progress(job_id, line)
+            except Exception:
+                pass  # nunca interrumpir por error de parseo
+
+        process.wait(timeout=9000)
+
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(process.returncode, MOTOR_OCR_WRAPPER)
 
         with open(results_file, encoding="utf-8") as f:
             raw = json.load(f)
 
-        # Transformar al formato del panel
         doc = raw["doc"]
         result = {
             "total_pages": doc["total_pages"],
@@ -146,6 +248,8 @@ def _run_job(job_id: str, pdf_path: Path, pages: Optional[list]) -> None:
         _update_job(
             job_id,
             status="done",
+            progress_pct=100,
+            progress_stage="Completado",
             result=json.dumps(result, ensure_ascii=False),
         )
         logger.info(
@@ -157,13 +261,31 @@ def _run_job(job_id: str, pdf_path: Path, pages: Optional[list]) -> None:
 
     except subprocess.CalledProcessError as e:
         logger.error("Job %s: subprocess falló con código %d", job_id, e.returncode)
-        _update_job(job_id, status="error", error=f"motor-OCR terminó con error (código {e.returncode})")
+        _update_job(
+            job_id,
+            status="error",
+            progress_pct=0,
+            progress_stage=None,
+            error=f"motor-OCR terminó con error (código {e.returncode})",
+        )
     except subprocess.TimeoutExpired:
         logger.error("Job %s: timeout", job_id)
-        _update_job(job_id, status="error", error="Timeout: el procesamiento superó el límite de tiempo")
+        _update_job(
+            job_id,
+            status="error",
+            progress_pct=0,
+            progress_stage=None,
+            error="Timeout: el procesamiento superó el límite de tiempo",
+        )
     except Exception as e:
         logger.exception("Job %s: error inesperado", job_id)
-        _update_job(job_id, status="error", error=str(e))
+        _update_job(
+            job_id,
+            status="error",
+            progress_pct=0,
+            progress_stage=None,
+            error=str(e),
+        )
     finally:
         if args_file:
             Path(args_file).unlink(missing_ok=True)
@@ -209,7 +331,7 @@ async def create_job(
 async def list_jobs():
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
-            "SELECT id, filename, pages_from, pages_to, status, created_at "
+            "SELECT id, filename, pages_from, pages_to, status, created_at, progress_pct "
             "FROM jobs ORDER BY created_at DESC LIMIT 50"
         ).fetchall()
     return [
@@ -220,6 +342,7 @@ async def list_jobs():
             "pages_to": r[3],
             "status": r[4],
             "created_at": r[5],
+            "progress_pct": r[6] or 0,
         }
         for r in rows
     ]
@@ -229,7 +352,8 @@ async def list_jobs():
 async def get_job(job_id: str):
     with sqlite3.connect(DB_PATH) as conn:
         row = conn.execute(
-            "SELECT id, filename, pages_from, pages_to, status, created_at, result, error "
+            "SELECT id, filename, pages_from, pages_to, status, created_at, "
+            "result, error, progress_pct, progress_stage, doc_total_pages "
             "FROM jobs WHERE id = ?",
             (job_id,),
         ).fetchone()
@@ -244,4 +368,7 @@ async def get_job(job_id: str):
         "created_at": row[5],
         "result": json.loads(row[6]) if row[6] else None,
         "error": row[7],
+        "progress_pct": row[8] or 0,
+        "progress_stage": row[9],
+        "doc_total_pages": row[10],
     }
