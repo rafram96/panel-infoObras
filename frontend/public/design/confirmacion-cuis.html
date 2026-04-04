@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-error": "#ffffff",
+                "inverse-primary": "#adc8f5",
+                "on-error-container": "#93000a",
+                "on-tertiary-fixed-variant": "#004395",
+                "surface-bright": "#f8f9fa",
+                "primary-container": "#1e3a5f",
+                "error-container": "#ffdad6",
+                "on-background": "#191c1d",
+                "on-primary-fixed-variant": "#2d486d",
+                "on-primary-fixed": "#001c3b",
+                "inverse-surface": "#2e3132",
+                "surface-container-high": "#e7e8e9",
+                "error": "#ba1a1a",
+                "tertiary": "#002252",
+                "on-tertiary-fixed": "#001a42",
+                "outline": "#74777f",
+                "background": "#f8f9fa",
+                "on-tertiary": "#ffffff",
+                "on-surface-variant": "#43474e",
+                "secondary": "#515f74",
+                "surface-container-low": "#f3f4f5",
+                "surface-container": "#edeeef",
+                "secondary-container": "#d5e3fc",
+                "surface": "#f8f9fa",
+                "on-secondary-fixed-variant": "#3a485b",
+                "on-tertiary-container": "#73a2ff",
+                "primary-fixed-dim": "#adc8f5",
+                "tertiary-fixed-dim": "#adc6ff",
+                "primary-fixed": "#d5e3ff",
+                "on-primary": "#ffffff",
+                "surface-tint": "#455f87",
+                "secondary-fixed-dim": "#b9c7df",
+                "on-primary-container": "#8aa4cf",
+                "on-secondary-fixed": "#0d1c2e",
+                "surface-variant": "#e1e3e4",
+                "surface-container-lowest": "#ffffff",
+                "outline-variant": "#c4c6cf",
+                "on-secondary-container": "#57657a",
+                "primary": "#022448",
+                "inverse-on-surface": "#f0f1f2",
+                "secondary-fixed": "#d5e3fc",
+                "tertiary-fixed": "#d8e2ff",
+                "on-secondary": "#ffffff",
+                "on-surface": "#191c1d",
+                "tertiary-container": "#00377c",
+                "surface-dim": "#d9dadb",
+                "surface-container-highest": "#e1e3e4"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+            },
+            "fontFamily": {
+                "headline": ["Inter"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+            }
+          },
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#f8f9fa] dark:bg-slate-900/90 backdrop-blur-sm h-12 flex justify-between items-center px-6">
+<div class="flex items-center gap-4">
+<span class="text-xs font-bold uppercase tracking-[0.05rem] text-[#022448] dark:text-blue-300">InfoObras Analyzer</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex gap-4 items-center">
+<span class="material-symbols-outlined text-slate-500 hover:bg-[#edeeef] p-1 rounded transition-all cursor-pointer" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-slate-500 hover:bg-[#edeeef] p-1 rounded transition-all cursor-pointer" data-icon="account_circle">account_circle</span>
+<span class="material-symbols-outlined text-slate-500 hover:bg-[#edeeef] p-1 rounded transition-all cursor-pointer" data-icon="settings">settings</span>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col bg-[#edeeef] dark:bg-slate-950 pt-12">
+<div class="px-6 py-8">
+<h2 class="text-sm font-black uppercase tracking-[0.1rem] text-[#022448] dark:text-blue-500">InfoObras</h2>
+<p class="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">Analyzer Framework</p>
+</div>
+<nav class="flex flex-col h-full py-4 space-y-1">
+<a class="flex items-center px-6 py-3 gap-3 text-slate-600 hover:bg-[#e7e8e9] transition-colors duration-150 text-[0.8125rem] font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center px-6 py-3 gap-3 bg-white text-[#022448] font-bold border-l-4 border-[#022448] text-[0.8125rem]" href="#">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+                Nuevo Análisis
+            </a>
+<a class="flex items-center px-6 py-3 gap-3 text-slate-600 hover:bg-[#e7e8e9] transition-colors duration-150 text-[0.8125rem] font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="manage_search">manage_search</span>
+                Historial
+            </a>
+<a class="flex items-center px-6 py-3 gap-3 text-slate-600 hover:bg-[#e7e8e9] transition-colors duration-150 text-[0.8125rem] font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Configuración
+            </a>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-12 min-h-screen">
+<div class="max-w-6xl mx-auto p-8">
+<!-- Header Section -->
+<header class="mb-8">
+<div class="flex items-center gap-2 text-slate-500 mb-2">
+<span class="text-[0.6875rem] font-bold uppercase tracking-wider">Análisis ID: #OBR-2024-081</span>
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+<span class="text-[0.6875rem] font-bold uppercase tracking-wider">Mapeo de Entidades</span>
+</div>
+<h1 class="text-2xl font-semibold text-primary tracking-tight">Confirmación de Código Único de Inversión (CUI)</h1>
+<p class="text-on-surface-variant text-sm mt-1">Valide la vinculación de los proyectos detectados con el Banco de Inversiones.</p>
+</header>
+<!-- Alert Banner -->
+<div class="mb-8 bg-[#FFF9C4] border-l-4 border-[#FBC02D] p-4 flex items-center justify-between">
+<div class="flex items-center gap-3 text-[#5F4B00]">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="text-sm font-medium">Se detectaron 5 proyectos sin CUI vinculado automáticamente.</span>
+</div>
+<button class="text-[0.6875rem] font-bold uppercase tracking-wider text-[#5F4B00] hover:underline">Ver todos</button>
+</div>
+<!-- Global Action -->
+<div class="flex justify-end mb-6">
+<button class="bg-primary text-white px-6 py-2.5 rounded-lg text-[0.875rem] font-bold flex items-center gap-2 shadow-sm hover:opacity-90 transition-opacity">
+                    Confirmar todos y continuar
+                    <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Project List -->
+<div class="space-y-4">
+<!-- Project Card 1 (Expanded) -->
+<div class="bg-surface-container-lowest border-l-4 border-[#FBC02D] overflow-hidden">
+<div class="p-6 flex justify-between items-start">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<span class="bg-[#FFF9C4] text-[#5F4B00] px-2 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wider rounded">Pendiente de CUI</span>
+<span class="text-xs text-slate-400">ID Local: L-8821</span>
+</div>
+<h3 class="text-lg font-semibold text-primary leading-snug">Mejoramiento de los servicios de salud del puesto de salud de Chinchobamba</h3>
+<div class="flex items-center gap-4 mt-2">
+<div class="flex items-center gap-1.5 text-on-surface-variant text-xs">
+<span class="material-symbols-outlined text-sm" data-icon="person">person</span>
+<span>Ing. Roberto Carlos Mendoza</span>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant text-xs">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span>
+<span>Ancash, Pomabamba</span>
+</div>
+</div>
+</div>
+<button class="material-symbols-outlined text-slate-400" data-icon="expand_less">expand_less</button>
+</div>
+<!-- Expansion Area -->
+<div class="bg-surface-container-low p-6 pt-0">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- AI Candidates -->
+<div class="md:col-span-2">
+<div class="mb-4 flex items-center justify-between">
+<h4 class="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">Candidatos sugeridos por IA</h4>
+<span class="text-[0.625rem] italic text-slate-400">Basado en similitud semántica</span>
+</div>
+<div class="space-y-2">
+<!-- Candidate 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg flex items-center justify-between group hover:ring-1 ring-primary transition-all">
+<div class="flex-1 pr-4">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-bold text-primary">CUI: 2349811</span>
+<span class="text-[0.625rem] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">98% Match</span>
+</div>
+<p class="text-xs text-on-surface font-medium leading-tight">RECUPERACIÓN DE LOS SERVICIOS DE SALUD EN EL ESTABLECIMIENTO DE SALUD CHINCHOBAMBA - DISTRITO DE CHINCHOBAMBA - PROVINCIA DE POMABAMBA</p>
+</div>
+<button class="bg-primary text-white px-3 py-1.5 rounded text-[0.6875rem] font-bold uppercase tracking-wider">Seleccionar</button>
+</div>
+<!-- Candidate 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-lg flex items-center justify-between opacity-70 hover:opacity-100 transition-all">
+<div class="flex-1 pr-4">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-bold text-slate-500">CUI: 2102933</span>
+<span class="text-[0.625rem] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">42% Match</span>
+</div>
+<p class="text-xs text-on-surface font-medium leading-tight">AMPLIACIÓN DEL PUESTO DE SALUD POMABAMBA - DISTRITO DE HUAYLLAN</p>
+</div>
+<button class="border border-outline-variant text-slate-600 px-3 py-1.5 rounded text-[0.6875rem] font-bold uppercase tracking-wider hover:bg-slate-50">Seleccionar</button>
+</div>
+</div>
+</div>
+<!-- Manual Input -->
+<div class="bg-surface-container-high/50 p-5 rounded-lg">
+<h4 class="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500 mb-4">Ingreso Manual</h4>
+<div class="space-y-4">
+<div>
+<label class="block text-[0.625rem] font-bold uppercase text-slate-400 mb-1">Código CUI</label>
+<input class="w-full bg-white border-outline-variant rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-primary-fixed outline-none" placeholder="Ej: 2345678" type="text"/>
+</div>
+<button class="w-full bg-surface-container-lowest border border-primary text-primary px-4 py-2 rounded-lg text-xs font-bold hover:bg-primary-container hover:text-white transition-colors">
+                                        Validar Código
+                                    </button>
+<p class="text-[0.625rem] text-slate-500 leading-relaxed">
+                                        Si no encuentra el proyecto en la lista, ingrese el CUI de 7 dígitos manualmente para realizar una búsqueda profunda.
+                                    </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Project Card 2 -->
+<div class="bg-surface-container-lowest border-l-4 border-[#FBC02D] p-6 flex justify-between items-center group cursor-pointer hover:bg-white">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<span class="bg-[#FFF9C4] text-[#5F4B00] px-2 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wider rounded">Pendiente de CUI</span>
+<span class="text-xs text-slate-400">ID Local: L-9004</span>
+</div>
+<h3 class="text-lg font-semibold text-primary">Mejoramiento de la infraestructura vial de la Av. Principal de Chorrillos</h3>
+<div class="flex items-center gap-4 mt-2">
+<div class="flex items-center gap-1.5 text-on-surface-variant text-xs">
+<span class="material-symbols-outlined text-sm" data-icon="person">person</span>
+<span>Arq. Elena Vasquez</span>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant text-xs">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span>
+<span>Lima, Chorrillos</span>
+</div>
+</div>
+</div>
+<button class="material-symbols-outlined text-slate-400 group-hover:text-primary" data-icon="expand_more">expand_more</button>
+</div>
+<!-- Project Card 3 -->
+<div class="bg-surface-container-lowest border-l-4 border-[#FBC02D] p-6 flex justify-between items-center group cursor-pointer hover:bg-white">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<span class="bg-[#FFF9C4] text-[#5F4B00] px-2 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wider rounded">Pendiente de CUI</span>
+<span class="text-xs text-slate-400">ID Local: L-8952</span>
+</div>
+<h3 class="text-lg font-semibold text-primary">Instalación del sistema de riego tecnificado en la comunidad de Huallanca</h3>
+<div class="flex items-center gap-4 mt-2">
+<div class="flex items-center gap-1.5 text-on-surface-variant text-xs">
+<span class="material-symbols-outlined text-sm" data-icon="person">person</span>
+<span>Ing. Carlos Ruiz</span>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant text-xs">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span>
+<span>Puno, Huallanca</span>
+</div>
+</div>
+</div>
+<button class="material-symbols-outlined text-slate-400 group-hover:text-primary" data-icon="expand_more">expand_more</button>
+</div>
+</div>
+<!-- Secondary Actions -->
+<div class="mt-12 flex items-center justify-between border-t border-outline-variant/20 pt-8">
+<button class="text-slate-500 font-bold text-sm flex items-center gap-2 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+                    Regresar al paso anterior
+                </button>
+<div class="flex gap-4">
+<button class="border border-outline-variant text-slate-600 px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors">
+                        Omitir por ahora
+                    </button>
+<button class="bg-primary text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-primary/10 hover:opacity-90">
+                        Finalizar y Analizar
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Help Widget (Signature Tonal Layering) -->
+<div class="fixed bottom-8 right-8 bg-surface-container-lowest p-4 rounded-xl border-l-4 border-primary shadow-[0_12px_40px_rgba(2,36,72,0.08)] max-w-xs">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="lightbulb">lightbulb</span>
+<div>
+<h5 class="text-xs font-bold text-primary mb-1">Tip de Conciliación</h5>
+<p class="text-[0.6875rem] text-on-surface-variant leading-relaxed">
+                    Si el nombre del proyecto es muy genérico, la IA puede fallar. Intente buscar por la <b>ubicación exacta</b> en el campo de ingreso manual.
+                </p>
+</div>
+</div>
+</div>
+</body></html>

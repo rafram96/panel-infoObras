@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nuevo Análisis - InfoObras Analyzer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c4c6cf;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#adc8f5",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#004395",
+                        "surface-bright": "#f8f9fa",
+                        "primary-container": "#1e3a5f",
+                        "error-container": "#ffdad6",
+                        "on-background": "#191c1d",
+                        "on-primary-fixed-variant": "#2d486d",
+                        "on-primary-fixed": "#001c3b",
+                        "inverse-surface": "#2e3132",
+                        "surface-container-high": "#e7e8e9",
+                        "error": "#ba1a1a",
+                        "tertiary": "#002252",
+                        "on-tertiary-fixed": "#001a42",
+                        "outline": "#74777f",
+                        "background": "#f8f9fa",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#43474e",
+                        "secondary": "#515f74",
+                        "surface-container-low": "#f3f4f5",
+                        "surface-container": "#edeeef",
+                        "secondary-container": "#d5e3fc",
+                        "surface": "#f8f9fa",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-tertiary-container": "#73a2ff",
+                        "primary-fixed-dim": "#adc8f5",
+                        "tertiary-fixed-dim": "#adc6ff",
+                        "primary-fixed": "#d5e3ff",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#455f87",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "on-primary-container": "#8aa4cf",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "surface-variant": "#e1e3e4",
+                        "surface-container-lowest": "#ffffff",
+                        "outline-variant": "#c4c6cf",
+                        "on-secondary-container": "#57657a",
+                        "primary": "#022448",
+                        "inverse-on-surface": "#f0f1f2",
+                        "secondary-fixed": "#d5e3fc",
+                        "tertiary-fixed": "#d8e2ff",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#191c1d",
+                        "tertiary-container": "#00377c",
+                        "surface-dim": "#d9dadb",
+                        "surface-container-highest": "#e1e3e4"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col bg-[#edeeef] dark:bg-slate-950 z-[60]">
+<div class="px-6 py-8">
+<h1 class="text-sm font-black uppercase tracking-[0.1rem] text-[#022448] dark:text-blue-500">InfoObras</h1>
+<p class="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">Analyzer Framework</p>
+</div>
+<nav class="flex flex-col h-full py-4 space-y-1">
+<a class="flex items-center px-6 py-3 text-slate-600 dark:text-slate-400 hover:text-[#022448] dark:hover:text-blue-300 hover:bg-[#e7e8e9] dark:hover:bg-slate-800 transition-colors duration-150 font-['Inter'] text-[0.8125rem] font-medium cursor-pointer active:bg-[#e7e8e9]" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center px-6 py-3 bg-white dark:bg-slate-900 text-[#022448] dark:text-white font-bold border-l-4 border-[#022448] dark:border-blue-600 font-['Inter'] text-[0.8125rem] cursor-pointer active:bg-[#e7e8e9]" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="query_stats">query_stats</span>
+                Nuevo Análisis
+            </a>
+<a class="flex items-center px-6 py-3 text-slate-600 dark:text-slate-400 hover:text-[#022448] dark:hover:text-blue-300 hover:bg-[#e7e8e9] dark:hover:bg-slate-800 transition-colors duration-150 font-['Inter'] text-[0.8125rem] font-medium cursor-pointer active:bg-[#e7e8e9]" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="manage_search">manage_search</span>
+                Historial
+            </a>
+<a class="flex items-center px-6 py-3 text-slate-600 dark:text-slate-400 hover:text-[#022448] dark:hover:text-blue-300 hover:bg-[#e7e8e9] dark:hover:bg-slate-800 transition-colors duration-150 font-['Inter'] text-[0.8125rem] font-medium cursor-pointer active:bg-[#e7e8e9]" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="settings">settings</span>
+                Configuración
+            </a>
+</nav>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 left-64 right-0 h-12 flex justify-between items-center px-6 z-50 bg-[#f8f9fa] dark:bg-slate-900/90 bg-[#edeeef] dark:bg-slate-800 backdrop-blur-sm">
+<div class="flex items-center space-x-4">
+<span class="text-xs font-bold uppercase tracking-[0.05rem] text-[#022448] dark:text-blue-300">InfoObras Analyzer</span>
+</div>
+<div class="flex items-center space-x-6 h-full">
+<div class="flex items-center space-x-4 h-full">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 hover:bg-[#edeeef] dark:hover:bg-slate-800 p-1.5 transition-all duration-200 cursor-pointer" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 hover:bg-[#edeeef] dark:hover:bg-slate-800 p-1.5 transition-all duration-200 cursor-pointer" data-icon="account_circle">account_circle</span>
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 hover:bg-[#edeeef] dark:hover:bg-slate-800 p-1.5 transition-all duration-200 cursor-pointer" data-icon="settings">settings</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-12 min-h-screen bg-surface">
+<div class="max-w-[1200px] mx-auto p-8 lg:p-12">
+<!-- Page Header -->
+<div class="mb-10 border-l-4 border-primary pl-6">
+<span class="text-[0.6875rem] font-bold uppercase tracking-[0.15rem] text-secondary">Módulo de IA Operativa</span>
+<h2 class="text-3xl font-bold tracking-tight text-primary mt-1">Nuevo Análisis de Propuesta Técnica</h2>
+<p class="text-on-surface-variant text-sm mt-2 max-w-2xl">Inicie el proceso de auditoría inteligente cargando los documentos del concurso. El sistema utilizará OCR avanzado para verificar el cumplimiento de las bases.</p>
+</div>
+<!-- Form Container -->
+<div class="max-w-[800px]">
+<form class="space-y-8">
+<!-- Section 1: Contest Data -->
+<section class="bg-surface-container-lowest p-8 rounded-lg border border-outline-variant/10 shadow-[0_12px_40px_rgba(2,36,72,0.04)]">
+<div class="flex items-center gap-2 mb-6 border-b border-surface-container-high pb-4">
+<span class="material-symbols-outlined text-primary" data-icon="description">description</span>
+<h3 class="text-sm font-bold uppercase tracking-wider text-primary">Datos del Concurso</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="md:col-span-2">
+<label class="block text-[0.6875rem] font-bold uppercase tracking-wider text-secondary mb-2">Nombre del Concurso</label>
+<input class="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-sm font-medium p-3 rounded-lg text-on-surface" type="text" value="Concurso Público N° 01-2026-VIVIENDA"/>
+</div>
+<div>
+<label class="block text-[0.6875rem] font-bold uppercase tracking-wider text-secondary mb-2">Entidad</label>
+<input class="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-sm font-medium p-3 rounded-lg text-on-surface" type="text" value="MVCS"/>
+</div>
+<div>
+<label class="block text-[0.6875rem] font-bold uppercase tracking-wider text-secondary mb-2">Items</label>
+<input class="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-sm font-medium p-3 rounded-lg text-on-surface" type="text" value="Unique"/>
+</div>
+</div>
+</section>
+<!-- Section 2: Documents (Dropzones) -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Technical Proposal Dropzone -->
+<div class="bg-surface-container-lowest p-8 rounded-lg border-2 border-dashed border-outline-variant/30 hover:border-primary/40 transition-colors group relative">
+<div class="flex flex-col items-center text-center">
+<div class="w-12 h-12 rounded-full bg-secondary-container/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="file_present">file_present</span>
+</div>
+<h4 class="text-[0.875rem] font-semibold text-primary">Propuesta Técnica</h4>
+<p class="text-[0.6875rem] text-on-surface-variant mt-1">PDF, escaneado o digitalizado</p>
+<div class="mt-4 flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full border border-green-100">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-[0.6875rem] font-bold uppercase tracking-tight">Propuesta_Tecnica_Final.pdf</span>
+</div>
+</div>
+</div>
+<!-- Bases Dropzone -->
+<div class="bg-surface-container-lowest p-8 rounded-lg border-2 border-dashed border-outline-variant/30 hover:border-primary/40 transition-colors group">
+<div class="flex flex-col items-center text-center">
+<div class="w-12 h-12 rounded-full bg-secondary-container/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="library_books">library_books</span>
+</div>
+<h4 class="text-[0.875rem] font-semibold text-primary">Bases del Concurso</h4>
+<p class="text-[0.6875rem] text-on-surface-variant mt-1">Arrastre o haga clic para subir</p>
+<div class="mt-4 flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full border border-green-100">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-[0.6875rem] font-bold uppercase tracking-tight">Bases_Administrativas_2026.pdf</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Advanced Options (Collapsible) -->
+<section class="bg-surface-container p-1 rounded-lg">
+<details class="group bg-surface-container-lowest rounded-lg border border-outline-variant/10 overflow-hidden" open="">
+<summary class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container-low transition-colors list-none">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="settings_input_component">settings_input_component</span>
+<span class="text-sm font-bold uppercase tracking-wider text-secondary">Opciones Avanzadas</span>
+</div>
+<span class="material-symbols-outlined text-secondary group-open:rotate-180 transition-transform" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="p-6 border-t border-surface-container-high bg-surface-container-lowest">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="flex flex-col">
+<label class="block text-[0.6875rem] font-bold uppercase tracking-wider text-secondary mb-3">Rango de Páginas (Análisis Focalizado)</label>
+<div class="flex items-center gap-3">
+<input class="w-24 bg-surface-container-low border-0 text-sm font-medium p-2 rounded-lg text-on-surface" placeholder="Inicio" type="text"/>
+<span class="text-outline-variant">—</span>
+<input class="w-24 bg-surface-container-low border-0 text-sm font-medium p-2 rounded-lg text-on-surface" placeholder="Fin" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 h-full">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+<span class="ml-3 text-[0.8125rem] font-semibold text-primary">Forzar Motor OCR de Precisión</span>
+</label>
+</div>
+</div>
+<div class="mt-4 p-4 bg-secondary-container/20 rounded-lg border border-secondary-container/40">
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="info">info</span>
+<p class="text-[0.75rem] leading-relaxed text-on-secondary-container">
+<span class="font-bold">Nota:</span> Forzar el OCR aumentará la precisión en documentos con sellos o tachaduras, pero el tiempo de procesamiento podría extenderse hasta 3 minutos adicionales.
+                                        </p>
+</div>
+</div>
+</div>
+</details>
+</section>
+<!-- Large Action Button -->
+<div class="flex items-center justify-end pt-4 gap-4">
+<button class="px-6 py-3 text-sm font-bold tracking-tight text-on-surface hover:bg-surface-container-high transition-all" type="button">
+                            Cancelar y Limpiar
+                        </button>
+<button class="relative group overflow-hidden px-10 py-4 bg-gradient-to-br from-[#022448] to-[#1e3a5f] text-white rounded-lg shadow-[0_4px_14px_0_rgba(2,36,72,0.39)] transition-all hover:scale-[1.02] active:scale-[0.98]" type="submit">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl" data-icon="rocket_launch">rocket_launch</span>
+<span class="text-sm font-extrabold uppercase tracking-[0.1rem]">Iniciar Análisis</span>
+</div>
+</button>
+</div>
+</form>
+</div>
+<!-- Footer Decorative Element (Blueprint style) -->
+<div class="mt-16 opacity-5 pointer-events-none absolute bottom-0 right-0 overflow-hidden w-96 h-96">
+<svg class="w-full h-full text-primary" viewbox="0 0 100 100">
+<line stroke="currentColor" stroke-width="0.1" x1="0" x2="100" y1="10" y2="10"></line>
+<line stroke="currentColor" stroke-width="0.1" x1="0" x2="100" y1="20" y2="20"></line>
+<line stroke="currentColor" stroke-width="0.1" x1="0" x2="100" y1="30" y2="30"></line>
+<line stroke="currentColor" stroke-width="0.1" x1="0" x2="100" y1="40" y2="40"></line>
+<line stroke="currentColor" stroke-width="0.1" x1="10" x2="10" y1="0" y2="100"></line>
+<line stroke="currentColor" stroke-width="0.1" x1="20" x2="20" y1="0" y2="100"></line>
+<line stroke="currentColor" stroke-width="0.1" x1="30" x2="30" y1="0" y2="100"></line>
+<circle cx="50" cy="50" fill="none" r="40" stroke="currentColor" stroke-width="0.2"></circle>
+<rect fill="none" height="50" stroke="currentColor" stroke-width="0.2" width="50" x="25" y="25"></rect>
+</svg>
+</div>
+</div>
+</main>
+</body></html>

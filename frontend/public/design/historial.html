@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Historial de Análisis | InfoObras Analyzer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#adc8f5",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#004395",
+                    "surface-bright": "#f8f9fa",
+                    "primary-container": "#1e3a5f",
+                    "error-container": "#ffdad6",
+                    "on-background": "#191c1d",
+                    "on-primary-fixed-variant": "#2d486d",
+                    "on-primary-fixed": "#001c3b",
+                    "inverse-surface": "#2e3132",
+                    "surface-container-high": "#e7e8e9",
+                    "error": "#ba1a1a",
+                    "tertiary": "#002252",
+                    "on-tertiary-fixed": "#001a42",
+                    "outline": "#74777f",
+                    "background": "#f8f9fa",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#43474e",
+                    "secondary": "#515f74",
+                    "surface-container-low": "#f3f4f5",
+                    "surface-container": "#edeeef",
+                    "secondary-container": "#d5e3fc",
+                    "surface": "#f8f9fa",
+                    "on-secondary-fixed-variant": "#3a485b",
+                    "on-tertiary-container": "#73a2ff",
+                    "primary-fixed-dim": "#adc8f5",
+                    "tertiary-fixed-dim": "#adc6ff",
+                    "primary-fixed": "#d5e3ff",
+                    "on-primary": "#ffffff",
+                    "surface-tint": "#455f87",
+                    "secondary-fixed-dim": "#b9c7df",
+                    "on-primary-container": "#8aa4cf",
+                    "on-secondary-fixed": "#0d1c2e",
+                    "surface-variant": "#e1e3e4",
+                    "surface-container-lowest": "#ffffff",
+                    "outline-variant": "#c4c6cf",
+                    "on-secondary-container": "#57657a",
+                    "primary": "#022448",
+                    "inverse-on-surface": "#f0f1f2",
+                    "secondary-fixed": "#d5e3fc",
+                    "tertiary-fixed": "#d8e2ff",
+                    "on-secondary": "#ffffff",
+                    "on-surface": "#191c1d",
+                    "tertiary-container": "#00377c",
+                    "surface-dim": "#d9dadb",
+                    "surface-container-highest": "#e1e3e4"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #c4c6cf; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col bg-[#edeeef] dark:bg-slate-950 border-r-0 bg-[#f3f4f5] dark:bg-slate-900 z-[60]">
+<div class="p-6">
+<div class="text-sm font-black uppercase tracking-[0.1rem] text-[#022448] dark:text-blue-500">InfoObras</div>
+<div class="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">Analyzer Framework</div>
+</div>
+<nav class="flex flex-col h-full py-4 space-y-1">
+<a class="flex items-center px-6 py-3 space-x-3 text-slate-600 dark:text-slate-400 hover:text-[#022448] dark:hover:text-blue-300 hover:bg-[#e7e8e9] dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer active:bg-[#e7e8e9] font-['Inter'] text-[0.8125rem] font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center px-6 py-3 space-x-3 text-slate-600 dark:text-slate-400 hover:text-[#022448] dark:hover:text-blue-300 hover:bg-[#e7e8e9] dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer active:bg-[#e7e8e9] font-['Inter'] text-[0.8125rem] font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+<span>Nuevo Análisis</span>
+</a>
+<a class="flex items-center px-6 py-3 space-x-3 bg-white dark:bg-slate-900 text-[#022448] dark:text-white font-bold border-l-4 border-[#022448] dark:border-blue-600 transition-colors duration-150 cursor-pointer active:bg-[#e7e8e9] font-['Inter'] text-[0.8125rem]" href="#">
+<span class="material-symbols-outlined" data-icon="manage_search">manage_search</span>
+<span>Historial</span>
+</a>
+<a class="flex items-center px-6 py-3 space-x-3 text-slate-600 dark:text-slate-400 hover:text-[#022448] dark:hover:text-blue-300 hover:bg-[#e7e8e9] dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer active:bg-[#e7e8e9] font-['Inter'] text-[0.8125rem] font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Configuración</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-1 ml-64 flex flex-col">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-[#f8f9fa] dark:bg-slate-900/90 backdrop-blur-sm bg-[#edeeef] dark:bg-slate-800 border-b-0 h-12 flex justify-between items-center px-6">
+<div class="flex items-center gap-4">
+<span class="text-xs font-bold uppercase tracking-[0.05rem] text-[#022448] dark:text-blue-300">InfoObras Analyzer</span>
+</div>
+<div class="flex items-center gap-6">
+<button class="material-symbols-outlined text-slate-500 hover:bg-[#edeeef] p-1 rounded transition-all" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-slate-500 hover:bg-[#edeeef] p-1 rounded transition-all" data-icon="account_circle">account_circle</button>
+<button class="material-symbols-outlined text-slate-500 hover:bg-[#edeeef] p-1 rounded transition-all" data-icon="settings">settings</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="mt-12 p-8 flex-1 bg-surface min-h-[calc(100vh-48px)]">
+<!-- Page Header -->
+<div class="mb-8">
+<h1 class="text-2xl font-semibold text-primary tracking-tight font-headline">Historial de Análisis</h1>
+<p class="text-secondary text-sm font-body mt-1">Gestione y revise los expedientes procesados por el motor de inteligencia.</p>
+</div>
+<!-- Filter Bar Section -->
+<div class="bg-surface-container-lowest p-4 mb-6 flex flex-wrap items-center gap-4 border border-outline-variant/20 rounded-lg">
+<!-- Search -->
+<div class="flex-1 min-w-[300px] relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline/10 rounded-lg text-sm focus:ring-2 focus:ring-primary-fixed focus:border-primary-fixed outline-none transition-all" placeholder="Buscar por concurso o expediente..." type="text"/>
+</div>
+<!-- State Filter -->
+<div class="flex items-center gap-2">
+<label class="text-[0.6875rem] font-bold uppercase tracking-wider text-outline">Estado</label>
+<select class="bg-surface-container-low border border-outline/10 rounded-lg text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-primary-fixed">
+<option>Todos</option>
+<option>Completado</option>
+<option>Error</option>
+<option>Procesando</option>
+</select>
+</div>
+<!-- Date Filter -->
+<div class="flex items-center gap-2">
+<label class="text-[0.6875rem] font-bold uppercase tracking-wider text-outline">Fecha</label>
+<input class="bg-surface-container-low border border-outline/10 rounded-lg text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-primary-fixed" type="date"/>
+</div>
+<!-- Order Filter -->
+<div class="flex items-center gap-2">
+<label class="text-[0.6875rem] font-bold uppercase tracking-wider text-outline">Orden</label>
+<select class="bg-surface-container-low border border-outline/10 rounded-lg text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-primary-fixed">
+<option>Más recientes</option>
+<option>Más antiguos</option>
+<option>Por Entidad</option>
+</select>
+</div>
+<button class="bg-primary text-white px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 hover:opacity-90 transition-all bg-gradient-to-br from-primary to-primary-container">
+<span class="material-symbols-outlined text-sm" data-icon="filter_list">filter_list</span>
+                    Filtrar
+                </button>
+</div>
+<!-- History Table -->
+<div class="bg-surface-container-lowest overflow-hidden rounded-lg border border-outline-variant/20">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-high">
+<tr>
+<th class="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">Fecha</th>
+<th class="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">Concurso / ID</th>
+<th class="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">Entidad</th>
+<th class="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">Estado</th>
+<th class="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant text-center">Prof.</th>
+<th class="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">Alertas</th>
+<th class="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">Tiempo</th>
+<th class="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant text-right">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Row 1 Success -->
+<tr class="hover:bg-secondary-container transition-colors">
+<td class="px-4 py-4 text-xs text-on-surface font-medium">12 Oct 2023, 14:30</td>
+<td class="px-4 py-4">
+<div class="text-xs font-bold text-primary">LP-2023-08921</div>
+<div class="text-[0.65rem] text-secondary truncate max-w-[200px]">Mejoramiento de Infraestructura Educativa San Juan</div>
+</td>
+<td class="px-4 py-4 text-xs">Muni. Provincial de Piura</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[0.625rem] font-bold uppercase bg-green-100 text-green-800 border-l-4 border-green-600">Completado</span>
+</td>
+<td class="px-4 py-4 text-center text-xs font-semibold">12</td>
+<td class="px-4 py-4 text-xs text-orange-600 font-medium">2 Observaciones</td>
+<td class="px-4 py-4 text-xs text-secondary">45s</td>
+<td class="px-4 py-4 text-right space-x-2">
+<button class="material-symbols-outlined text-primary text-lg hover:opacity-70" data-icon="visibility">visibility</button>
+<button class="material-symbols-outlined text-secondary text-lg hover:opacity-70" data-icon="download">download</button>
+<button class="material-symbols-outlined text-error text-lg hover:opacity-70" data-icon="delete">delete</button>
+</td>
+</tr>
+<!-- Row 2 Error -->
+<tr class="bg-surface-container-low hover:bg-secondary-container transition-colors">
+<td class="px-4 py-4 text-xs text-on-surface font-medium">12 Oct 2023, 11:15</td>
+<td class="px-4 py-4">
+<div class="text-xs font-bold text-primary">CP-2023-00445</div>
+<div class="text-[0.65rem] text-secondary truncate max-w-[200px]">Adquisición de Insumos Médicos - Hospital Regional</div>
+</td>
+<td class="px-4 py-4 text-xs">Gobierno Regional Cusco</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[0.625rem] font-bold uppercase bg-red-100 text-red-800 border-l-4 border-red-600">Error</span>
+</td>
+<td class="px-4 py-4 text-center text-xs font-semibold">0</td>
+<td class="px-4 py-4 text-xs text-red-700 font-medium italic">Fallo en lectura de OCR</td>
+<td class="px-4 py-4 text-xs text-secondary">--</td>
+<td class="px-4 py-4 text-right space-x-2">
+<button class="material-symbols-outlined text-outline text-lg cursor-not-allowed" data-icon="visibility">visibility</button>
+<button class="material-symbols-outlined text-outline text-lg cursor-not-allowed" data-icon="download">download</button>
+<button class="material-symbols-outlined text-error text-lg hover:opacity-70" data-icon="delete">delete</button>
+</td>
+</tr>
+<!-- Row 3 Processing -->
+<tr class="hover:bg-secondary-container transition-colors">
+<td class="px-4 py-4 text-xs text-on-surface font-medium">12 Oct 2023, 09:45</td>
+<td class="px-4 py-4">
+<div class="text-xs font-bold text-primary">AS-2023-0102</div>
+<div class="text-[0.65rem] text-secondary truncate max-w-[200px]">Servicio de Consultoría para Plan Urbano</div>
+</td>
+<td class="px-4 py-4 text-xs">Ministerio de Vivienda</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[0.625rem] font-bold uppercase bg-blue-100 text-blue-800 border-l-4 border-blue-600 animate-pulse">Procesando</span>
+</td>
+<td class="px-4 py-4 text-center text-xs font-semibold">--</td>
+<td class="px-4 py-4 text-xs text-secondary">Analizando archivos...</td>
+<td class="px-4 py-4 text-xs text-secondary">In progress</td>
+<td class="px-4 py-4 text-right space-x-2">
+<button class="material-symbols-outlined text-outline text-lg cursor-wait" data-icon="sync">sync</button>
+<button class="material-symbols-outlined text-error text-lg hover:opacity-70" data-icon="cancel">cancel</button>
+</td>
+</tr>
+<!-- Row 4 Success -->
+<tr class="bg-surface-container-low hover:bg-secondary-container transition-colors">
+<td class="px-4 py-4 text-xs text-on-surface font-medium">11 Oct 2023, 17:20</td>
+<td class="px-4 py-4">
+<div class="text-xs font-bold text-primary">LP-2023-99120</div>
+<div class="text-[0.65rem] text-secondary truncate max-w-[200px]">Construcción de Puente Atirantado Santa Rosa</div>
+</td>
+<td class="px-4 py-4 text-xs">Provías Nacional</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[0.625rem] font-bold uppercase bg-green-100 text-green-800 border-l-4 border-green-600">Completado</span>
+</td>
+<td class="px-4 py-4 text-center text-xs font-semibold">45</td>
+<td class="px-4 py-4 text-xs text-green-700 font-medium">Sin alertas</td>
+<td class="px-4 py-4 text-xs text-secondary">1m 12s</td>
+<td class="px-4 py-4 text-right space-x-2">
+<button class="material-symbols-outlined text-primary text-lg hover:opacity-70" data-icon="visibility">visibility</button>
+<button class="material-symbols-outlined text-secondary text-lg hover:opacity-70" data-icon="download">download</button>
+<button class="material-symbols-outlined text-error text-lg hover:opacity-70" data-icon="delete">delete</button>
+</td>
+</tr>
+<!-- Row 5 Success -->
+<tr class="hover:bg-secondary-container transition-colors">
+<td class="px-4 py-4 text-xs text-on-surface font-medium">11 Oct 2023, 15:00</td>
+<td class="px-4 py-4">
+<div class="text-xs font-bold text-primary">LP-2023-88212</div>
+<div class="text-[0.65rem] text-secondary truncate max-w-[200px]">Rehabilitación de Red de Agua y Alcantarillado</div>
+</td>
+<td class="px-4 py-4 text-xs">SEDAPAL</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[0.625rem] font-bold uppercase bg-green-100 text-green-800 border-l-4 border-green-600">Completado</span>
+</td>
+<td class="px-4 py-4 text-center text-xs font-semibold">8</td>
+<td class="px-4 py-4 text-xs text-orange-600 font-medium">1 Restricción</td>
+<td class="px-4 py-4 text-xs text-secondary">32s</td>
+<td class="px-4 py-4 text-right space-x-2">
+<button class="material-symbols-outlined text-primary text-lg hover:opacity-70" data-icon="visibility">visibility</button>
+<button class="material-symbols-outlined text-secondary text-lg hover:opacity-70" data-icon="download">download</button>
+<button class="material-symbols-outlined text-error text-lg hover:opacity-70" data-icon="delete">delete</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Section -->
+<div class="mt-6 flex items-center justify-between">
+<div class="text-[0.6875rem] font-bold uppercase tracking-wider text-outline">
+                    Mostrando 1 - 5 de 1,240 análisis
+                </div>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 flex items-center justify-center border border-outline/10 rounded hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center bg-primary text-white text-xs font-bold rounded">1</button>
+<button class="w-8 h-8 flex items-center justify-center border border-outline/10 text-xs font-bold rounded hover:bg-surface-container-high transition-all">2</button>
+<button class="w-8 h-8 flex items-center justify-center border border-outline/10 text-xs font-bold rounded hover:bg-surface-container-high transition-all">3</button>
+<span class="px-2 text-xs text-outline">...</span>
+<button class="w-8 h-8 flex items-center justify-center border border-outline/10 text-xs font-bold rounded hover:bg-surface-container-high transition-all">248</button>
+<button class="w-8 h-8 flex items-center justify-center border border-outline/10 rounded hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Statistics Summary Cards (Bento style) -->
+<div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-lg border-l-4 border-primary">
+<div class="text-[0.6875rem] font-bold uppercase tracking-wider text-outline mb-1">Total Analizados</div>
+<div class="text-3xl font-bold text-primary">1,240</div>
+<div class="mt-2 flex items-center gap-1 text-[0.6875rem] text-green-600 font-semibold">
+<span class="material-symbols-outlined text-[1rem]" data-icon="trending_up">trending_up</span>
+                        +12% este mes
+                    </div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg border-l-4 border-error">
+<div class="text-[0.6875rem] font-bold uppercase tracking-wider text-outline mb-1">Tasa de Error OCR</div>
+<div class="text-3xl font-bold text-primary">2.4%</div>
+<div class="mt-2 flex items-center gap-1 text-[0.6875rem] text-red-600 font-semibold">
+<span class="material-symbols-outlined text-[1rem]" data-icon="report">report</span>
+                        Mejorar calidad de escaneo
+                    </div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg border-l-4 border-secondary">
+<div class="text-[0.6875rem] font-bold uppercase tracking-wider text-outline mb-1">Tiempo Promedio</div>
+<div class="text-3xl font-bold text-primary">42s</div>
+<div class="mt-2 flex items-center gap-1 text-[0.6875rem] text-secondary font-semibold">
+<span class="material-symbols-outlined text-[1rem]" data-icon="speed">speed</span>
+                        Motor v2.4 Activo
+                    </div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
