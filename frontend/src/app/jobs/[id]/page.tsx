@@ -422,7 +422,7 @@ export default function JobDetailPage({
                 <table className="w-full text-left">
                   <thead className="bg-surface-container-high">
                     <tr>
-                      {["#", "Cargo", "N\u00b0", "Paginas", "Ubicacion en PDF"].map(
+                      {["#", "Cargo", "Nombre", "N\u00b0", "Exp.", "Paginas", "Ubicacion en PDF"].map(
                         (h) => (
                           <th
                             key={h}
@@ -527,10 +527,25 @@ function ProfessionalRow({
                 B
               </span>
             )}
+            {seccion._needs_review && (
+              <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
+                Revisar
+              </span>
+            )}
           </div>
+        </td>
+        <td className="px-3 py-2 text-sm text-on-surface">
+          {seccion.profesional?.nombre ?? (
+            <span className="text-slate-300">{"\u2014"}</span>
+          )}
         </td>
         <td className="px-3 py-2 text-xs text-secondary">
           {seccion.numero ?? "\u2014"}
+        </td>
+        <td className="px-3 py-2 text-xs text-secondary tabular-nums">
+          {seccion.experiencias?.length ?? (
+            <span className="text-slate-300">{"\u2014"}</span>
+          )}
         </td>
         <td className="px-3 py-2 text-xs text-secondary">
           {seccion.total_pages}
@@ -556,13 +571,83 @@ function ProfessionalRow({
       {/* ── Expanded detail ────────────────────────────────────────────── */}
       {expanded && (
         <tr>
-          <td colSpan={5} className="px-3 py-0">
+          <td colSpan={7} className="px-3 py-0">
             <div
-              className="py-3 px-4 mb-2 bg-surface-container-low rounded-lg"
+              className="py-3 px-4 mb-2 bg-surface-container-low rounded-lg space-y-4"
               style={{ animation: "fadeIn 0.2s ease-out" }}
             >
+              {/* Datos del profesional (Paso 2) */}
+              {seccion.profesional && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">person</span>
+                    Datos del Profesional
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    {[
+                      { label: "Nombre", value: seccion.profesional.nombre },
+                      { label: "DNI", value: seccion.profesional.dni },
+                      { label: "Profesion", value: seccion.profesional.profesion },
+                      {
+                        label: seccion.profesional.tipo_colegio ?? "Colegiatura",
+                        value: seccion.profesional.registro_colegio,
+                      },
+                    ].map(({ label, value }) => (
+                      <div key={label}>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          {label}
+                        </p>
+                        <p className="text-on-surface font-medium">
+                          {value || <span className="text-slate-300">{"\u2014"}</span>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Experiencias (Paso 3) */}
+              {seccion.experiencias && seccion.experiencias.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">description</span>
+                    Experiencias ({seccion.experiencias.length})
+                  </p>
+                  <div className="bg-surface-container-lowest rounded-lg overflow-hidden border border-outline-variant/10">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-surface-container-high">
+                        <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          <th className="px-3 py-1.5">Proyecto</th>
+                          <th className="px-3 py-1.5">Cargo</th>
+                          <th className="px-3 py-1.5">Empresa</th>
+                          <th className="px-3 py-1.5">Periodo</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-outline-variant/10">
+                        {seccion.experiencias.map((exp, ei) => (
+                          <tr key={ei}>
+                            <td className="px-3 py-1.5 font-medium text-on-surface max-w-[200px] truncate">
+                              {exp.proyecto || "\u2014"}
+                            </td>
+                            <td className="px-3 py-1.5 text-secondary">
+                              {exp.cargo || "\u2014"}
+                            </td>
+                            <td className="px-3 py-1.5 text-secondary max-w-[160px] truncate">
+                              {exp.empresa_emisora || "\u2014"}
+                            </td>
+                            <td className="px-3 py-1.5 text-secondary whitespace-nowrap">
+                              {exp.fecha_inicio || "?"} {"\u2013"} {exp.fecha_fin || "?"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Segmentacion info */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                {/* Page numbers */}
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
                     Paginas
@@ -572,7 +657,6 @@ function ProfessionalRow({
                   </p>
                 </div>
 
-                {/* Bloques */}
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
                     Bloques
@@ -589,7 +673,6 @@ function ProfessionalRow({
                   </div>
                 </div>
 
-                {/* Tipo */}
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
                     Tipo

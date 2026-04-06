@@ -15,6 +15,29 @@ export interface Bloque {
   end: number;
 }
 
+export interface ProfesionalExtraccion {
+  nombre: string | null;
+  dni: string | null;
+  tipo_colegio: string | null;
+  registro_colegio: string | null;
+  profesion: string | null;
+  cargo_postulado: string | null;
+  _needs_review?: boolean;
+}
+
+export interface Experiencia {
+  proyecto: string | null;
+  cargo: string | null;
+  empresa_emisora: string | null;
+  ruc: string | null;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  fecha_emision: string | null;
+  firmante: string | null;
+  cargo_firmante: string | null;
+  folio: string | null;
+}
+
 export interface Seccion {
   index: number;
   cargo: string;
@@ -24,6 +47,9 @@ export interface Seccion {
   page_numbers: number[];
   bloques: Bloque[];
   es_tipo_b: boolean;
+  profesional?: ProfesionalExtraccion | null;
+  experiencias?: Experiencia[];
+  _needs_review?: boolean;
 }
 
 export interface JobDetail extends Job {
