@@ -190,9 +190,20 @@ export default function HistorialPage() {
                     </span>
                   </td>
 
-                  {/* Profesionales */}
+                  {/* Profesionales / Cargos */}
                   <td className="px-4 py-4 text-center text-xs font-semibold text-on-surface-variant">
-                    &mdash;
+                    {job.profesionales_count != null ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="text-primary font-bold text-sm">
+                          {job.profesionales_count}
+                        </span>
+                        <span className="text-[0.6rem] text-slate-400">
+                          {job.job_type === "tdr" ? "cargos" : "prof."}
+                        </span>
+                      </span>
+                    ) : (
+                      <span>&mdash;</span>
+                    )}
                   </td>
 
                   {/* Progreso */}

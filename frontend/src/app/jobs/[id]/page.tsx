@@ -77,20 +77,19 @@ export default function JobDetailPage({
     return () => clearInterval(interval);
   }, [detail?.status, fetchDetail]);
 
-  // ── Elapsed timer ───────────────────────────────────────────────────────
+  // ── Elapsed timer (only counts from started_at, not queue time) ─────────
   useEffect(() => {
     if (!detail) return;
-    const isActive =
-      detail.status === "pending" || detail.status === "running";
-    if (!isActive) return;
+    if (detail.status !== "running") return;
+    const base = detail.started_at ?? detail.created_at;
 
-    setElapsed(elapsedSince(detail.created_at));
+    setElapsed(elapsedSince(base));
     const timer = setInterval(() => {
-      setElapsed(elapsedSince(detail.created_at));
+      setElapsed(elapsedSince(base));
     }, 1_000);
 
     return () => clearInterval(timer);
-  }, [detail?.status, detail?.created_at]);
+  }, [detail?.status, detail?.started_at, detail?.created_at]);
 
   // ── Toggle row expansion ────────────────────────────────────────────────
   const toggleRow = (index: number) => {
@@ -314,39 +313,69 @@ export default function JobDetailPage({
             </div>
           </div>
 
-          {/* Elapsed timer */}
+          {/* Elapsed timer / Queue status */}
           <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 p-5 flex items-center gap-4">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <span className="material-symbols-outlined text-xl text-primary">
-                timer
+                {detail.status === "pending" ? "hourglass_top" : "timer"}
               </span>
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                Tiempo Transcurrido
+                {detail.status === "pending" ? "Estado" : "Tiempo Transcurrido"}
               </p>
               <p className="text-2xl font-bold text-primary">
-                {formatSeconds(elapsed)}
+                {detail.status === "pending" ? "En cola..." : formatSeconds(elapsed)}
               </p>
             </div>
           </div>
+
+          {/* Job logs (debug) */}
+          {detail.logs && (
+            <details className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+              <summary className="px-5 py-3 cursor-pointer hover:bg-surface-container-low transition-colors flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary text-sm">terminal</span>
+                <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-secondary">
+                  Logs del procesamiento
+                </span>
+              </summary>
+              <pre className="px-5 py-3 text-[0.6875rem] text-on-surface-variant font-mono leading-relaxed whitespace-pre-wrap border-t border-outline-variant/10 bg-surface-container-low max-h-60 overflow-y-auto">
+                {detail.logs}
+              </pre>
+            </details>
+          )}
         </div>
       )}
 
       {/* ── ERROR VIEW ───────────────────────────────────────────────────── */}
       {isError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-3">
-          <span className="material-symbols-outlined text-red-600 text-xl mt-0.5">
-            error
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-red-700 mb-1">
-              El analisis termino con error
-            </p>
-            <p className="text-sm text-red-600">
-              {detail.error ?? "Error desconocido durante el procesamiento."}
-            </p>
+        <div className="space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-3">
+            <span className="material-symbols-outlined text-red-600 text-xl mt-0.5">
+              error
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-red-700 mb-1">
+                El análisis terminó con error
+              </p>
+              <p className="text-sm text-red-600">
+                {detail.error ?? "Error desconocido durante el procesamiento."}
+              </p>
+            </div>
           </div>
+          {detail.logs && (
+            <details open className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+              <summary className="px-5 py-3 cursor-pointer hover:bg-surface-container-low transition-colors flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary text-sm">terminal</span>
+                <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-secondary">
+                  Logs del procesamiento
+                </span>
+              </summary>
+              <pre className="px-5 py-3 text-[0.6875rem] text-on-surface-variant font-mono leading-relaxed whitespace-pre-wrap border-t border-outline-variant/10 bg-surface-container-low max-h-60 overflow-y-auto">
+                {detail.logs}
+              </pre>
+            </details>
+          )}
         </div>
       )}
 

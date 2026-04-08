@@ -10,6 +10,7 @@ export interface Job {
   status: JobStatus;
   created_at: string;
   progress_pct: number;
+  profesionales_count: number | null;
 }
 
 export interface Bloque {
@@ -111,6 +112,8 @@ export interface TdrResult {
 export interface JobDetail extends Job {
   result: ExtractionResult | TdrResult | null;
   error: string | null;
+  started_at: string | null;
   progress_stage: string | null;
   doc_total_pages: number | null;
+  logs: string | null;
 }
