@@ -4,7 +4,7 @@ import { use, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 import PanelShell from "@/components/PanelShell";
-import type { JobDetail, Seccion } from "@/lib/types";
+import type { JobDetail, Seccion, ExtractionResult, TdrResult, RequisitoPersonal } from "@/lib/types";
 import {
   STATUS_LABEL,
   STATUS_BADGE,
@@ -33,7 +33,7 @@ export default function JobDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [activeTab, setActiveTab] = useState<"profesionales" | "metricas">(
+  const [activeTab, setActiveTab] = useState<"profesionales" | "metricas" | "requisitos" | "factores">(
     "profesionales",
   );
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -57,6 +57,14 @@ export default function JobDetailPage({
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
+
+  // ── Set default tab based on job_type ──────────────────────────────────
+  useEffect(() => {
+    if (!detail) return;
+    if (detail.job_type === "tdr" && activeTab === "profesionales") {
+      setActiveTab("requisitos");
+    }
+  }, [detail?.job_type]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Adaptive polling: 3s when active, 10s when idle ─────────────────────
   useEffect(() => {
@@ -188,38 +196,37 @@ export default function JobDetailPage({
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       {isDone && (
         <div className="flex gap-0 border-b border-outline-variant/20 mb-6">
-          <button
-            onClick={() => setActiveTab("profesionales")}
-            className={`px-4 py-2.5 text-xs font-semibold transition-colors relative ${
-              activeTab === "profesionales"
-                ? "text-primary"
-                : "text-outline hover:text-secondary"
-            }`}
-          >
-            <span className="material-symbols-outlined text-sm align-middle mr-1">
-              groups
-            </span>
-            Profesionales
-            {activeTab === "profesionales" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("metricas")}
-            className={`px-4 py-2.5 text-xs font-semibold transition-colors relative ${
-              activeTab === "metricas"
-                ? "text-primary"
-                : "text-outline hover:text-secondary"
-            }`}
-          >
-            <span className="material-symbols-outlined text-sm align-middle mr-1">
-              analytics
-            </span>
-            Metricas OCR
-            {activeTab === "metricas" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
-            )}
-          </button>
+          {detail.job_type === "tdr" ? (
+            <>
+              <TabButton
+                label="Requisitos RTM"
+                icon="fact_check"
+                active={activeTab === "requisitos"}
+                onClick={() => setActiveTab("requisitos")}
+              />
+              <TabButton
+                label="Factores de Evaluación"
+                icon="score"
+                active={activeTab === "factores"}
+                onClick={() => setActiveTab("factores")}
+              />
+            </>
+          ) : (
+            <>
+              <TabButton
+                label="Profesionales"
+                icon="groups"
+                active={activeTab === "profesionales"}
+                onClick={() => setActiveTab("profesionales")}
+              />
+              <TabButton
+                label="Métricas OCR"
+                icon="analytics"
+                active={activeTab === "metricas"}
+                onClick={() => setActiveTab("metricas")}
+              />
+            </>
+          )}
         </div>
       )}
 
@@ -343,118 +350,229 @@ export default function JobDetailPage({
         </div>
       )}
 
-      {/* ── DONE VIEW ────────────────────────────────────────────────────── */}
-      {isDone && detail.result && (
-        <>
-          {/* ── Summary cards ──────────────────────────────────────────── */}
-          <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-            <SummaryCard
-              icon="description"
-              label="Total Paginas"
-              value={String(detail.result.total_pages)}
-            />
-            <SummaryCard
-              icon="groups"
-              label="Profesionales"
-              value={String(detail.result.secciones.length)}
-            />
-            <SummaryCard
-              icon="timer"
-              label="Tiempo"
-              value={formatSeconds(detail.result.tiempo_total)}
-            />
-            <SummaryCard
-              icon="verified"
-              label="Confianza OCR"
-              value={`${(detail.result.conf_promedio * 100).toFixed(0)}%`}
-              valueClass={confColor(detail.result.conf_promedio)}
-            />
-            <SummaryCard
-              icon="warning"
-              label="Errores OCR"
-              value={String(detail.result.pages_error)}
-              valueClass={
-                detail.result.pages_error > 0 ? "text-red-600" : undefined
-              }
-            />
-          </section>
+      {/* ── DONE VIEW: Extraction ────────────────────────────────────────── */}
+      {isDone && detail.result && detail.job_type !== "tdr" && (() => {
+        const r = detail.result as ExtractionResult;
+        return (
+          <>
+            <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+              <SummaryCard icon="description" label="Total Páginas" value={String(r.total_pages)} />
+              <SummaryCard icon="groups" label="Profesionales" value={String(r.secciones.length)} />
+              <SummaryCard icon="timer" label="Tiempo" value={formatSeconds(r.tiempo_total)} />
+              <SummaryCard icon="verified" label="Confianza OCR"
+                value={`${(r.conf_promedio * 100).toFixed(0)}%`}
+                valueClass={confColor(r.conf_promedio)} />
+              <SummaryCard icon="warning" label="Errores OCR"
+                value={String(r.pages_error)}
+                valueClass={r.pages_error > 0 ? "text-red-600" : undefined} />
+            </section>
 
-          {/* ── Engine detail badges ───────────────────────────────────── */}
-          {activeTab === "metricas" && (
-            <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 p-5 mb-6">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">
-                Detalle de Motor OCR
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-blue-200">
-                  <span className="material-symbols-outlined text-sm">
-                    memory
+            {activeTab === "metricas" && (
+              <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 p-5 mb-6">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">
+                  Detalle de Motor OCR
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-blue-200">
+                    <span className="material-symbols-outlined text-sm">memory</span>
+                    PaddleOCR: {r.pages_paddle} págs
                   </span>
-                  PaddleOCR: {detail.result.pages_paddle} pags
-                </span>
-                <span className="inline-flex items-center gap-1.5 bg-violet-50 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-violet-200">
-                  <span className="material-symbols-outlined text-sm">
-                    auto_awesome
+                  <span className="inline-flex items-center gap-1.5 bg-violet-50 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-violet-200">
+                    <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                    Qwen-VL: {r.pages_qwen} págs
                   </span>
-                  Qwen-VL: {detail.result.pages_qwen} pags
-                </span>
-                {detail.result.pages_error > 0 && (
-                  <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200">
-                    <span className="material-symbols-outlined text-sm">
-                      error
+                  {r.pages_error > 0 && (
+                    <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200">
+                      <span className="material-symbols-outlined text-sm">error</span>
+                      Errores: {r.pages_error} págs
                     </span>
-                    Errores: {detail.result.pages_error} pags
-                  </span>
-                )}
-              </div>
-            </section>
-          )}
+                  )}
+                </div>
+              </section>
+            )}
 
-          {/* ── Professionals table ────────────────────────────────────── */}
-          {activeTab === "profesionales" && (
-            <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
-              <div className="px-5 py-4 border-b border-outline-variant/10">
-                <h2 className="text-sm font-semibold text-primary">
-                  Profesionales Detectados
-                </h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-surface-container-high">
-                    <tr>
-                      {["#", "Cargo", "Nombre", "N\u00b0", "Exp.", "Paginas", "Ubicacion en PDF"].map(
-                        (h) => (
-                          <th
-                            key={h}
-                            className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500"
-                          >
-                            {h}
-                          </th>
-                        ),
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant/10">
-                    {detail.result.secciones.map((sec, i) => (
-                      <ProfessionalRow
-                        key={sec.index}
-                        seccion={sec}
-                        index={i}
-                        totalDocPages={
-                          detail.doc_total_pages ?? detail.result!.total_pages
-                        }
-                        expanded={expandedRows.has(i)}
-                        onToggle={() => toggleRow(i)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {activeTab === "profesionales" && (
+              <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+                <div className="px-5 py-4 border-b border-outline-variant/10">
+                  <h2 className="text-sm font-semibold text-primary">Profesionales Detectados</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-surface-container-high">
+                      <tr>
+                        {["#", "Cargo", "Nombre", "N\u00b0", "Exp.", "Páginas", "Ubicación en PDF"].map((h) => (
+                          <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/10">
+                      {r.secciones.map((sec, i) => (
+                        <ProfessionalRow
+                          key={sec.index}
+                          seccion={sec}
+                          index={i}
+                          totalDocPages={detail.doc_total_pages ?? r.total_pages}
+                          expanded={expandedRows.has(i)}
+                          onToggle={() => toggleRow(i)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+          </>
+        );
+      })()}
+
+      {/* ── DONE VIEW: TDR ────────────────────────────────────────────────── */}
+      {isDone && detail.result && detail.job_type === "tdr" && (() => {
+        const r = detail.result as TdrResult;
+        return (
+          <>
+            <section className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <SummaryCard icon="badge" label="Cargos RTM" value={String(r.total_cargos)} />
+              <SummaryCard icon="score" label="Factores" value={String(r.total_factores)} />
+              <SummaryCard icon="business_center" label="Items Postor" value={String(r.rtm_postor?.length ?? 0)} />
+              <SummaryCard icon="fact_check" label="Personal Clave" value={String(r.rtm_personal?.length ?? 0)} />
             </section>
-          )}
-        </>
-      )}
+
+            {/* ── Requisitos RTM table ─────────────────────────────────── */}
+            {activeTab === "requisitos" && (
+              <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+                <div className="px-5 py-4 border-b border-outline-variant/10">
+                  <h2 className="text-sm font-semibold text-primary">
+                    Requisitos por Cargo Profesional
+                  </h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-surface-container-high">
+                      <tr>
+                        {["#", "Cargo", "Profesiones Aceptadas", "Experiencia Mínima", "Tipo de Obra", "Cargos Válidos"].map((h) => (
+                          <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/10">
+                      {r.rtm_personal.map((req, i) => (
+                        <TdrRequisitoRow key={i} req={req} index={i} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {/* ── Factores table ───────────────────────────────────────── */}
+            {activeTab === "factores" && (
+              <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+                <div className="px-5 py-4 border-b border-outline-variant/10">
+                  <h2 className="text-sm font-semibold text-primary">
+                    Factores de Evaluación
+                  </h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-surface-container-high">
+                      <tr>
+                        {["#", "Factor", "Aplica a", "Cargo", "Puntaje Máx.", "Metodología"].map((h) => (
+                          <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/10">
+                      {r.factores_evaluacion.map((f, i) => (
+                        <tr key={i} className="hover:bg-surface-container-high/40 transition-colors">
+                          <td className="px-3 py-2 text-xs text-secondary font-mono">{i + 1}</td>
+                          <td className="px-3 py-2 text-sm text-primary font-medium max-w-[250px]">{f.factor}</td>
+                          <td className="px-3 py-2">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                              f.aplica_a === "personal" ? "bg-blue-100 text-blue-700"
+                              : f.aplica_a === "postor" ? "bg-amber-100 text-amber-700"
+                              : "bg-violet-100 text-violet-700"
+                            }`}>
+                              {f.aplica_a}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-xs text-secondary">{f.cargo_personal || "\u2014"}</td>
+                          <td className="px-3 py-2 text-sm font-bold text-primary">{f.puntaje_maximo}</td>
+                          <td className="px-3 py-2 text-xs text-secondary max-w-[200px] truncate">{f.metodologia || "\u2014"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+          </>
+        );
+      })()}
     </PanelShell>
+  );
+}
+
+// ── TabButton ──────────────────────────────────────────────────────────────
+
+function TabButton({
+  label,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  icon: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2.5 text-xs font-semibold transition-colors relative ${
+        active ? "text-primary" : "text-outline hover:text-secondary"
+      }`}
+    >
+      <span className="material-symbols-outlined text-sm align-middle mr-1">
+        {icon}
+      </span>
+      {label}
+      {active && (
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
+      )}
+    </button>
+  );
+}
+
+// ── TdrRequisitoRow ────────────────────────────────────────────────────────
+
+function TdrRequisitoRow({
+  req,
+  index,
+}: {
+  req: RequisitoPersonal;
+  index: number;
+}) {
+  const expMin = req.experiencia_minima;
+  const meses = expMin?.cantidad;
+  const expLabel = meses
+    ? `${meses} meses${expMin?.descripcion ? ` — ${expMin.descripcion.slice(0, 80)}` : ""}`
+    : "\u2014";
+
+  return (
+    <tr className="hover:bg-surface-container-high/40 transition-colors">
+      <td className="px-3 py-2 text-xs text-secondary font-mono">{index + 1}</td>
+      <td className="px-3 py-2 text-sm text-primary font-medium">{req.cargo}</td>
+      <td className="px-3 py-2 text-xs text-secondary">
+        {req.profesiones_aceptadas?.join(", ") || "\u2014"}
+      </td>
+      <td className="px-3 py-2 text-xs text-secondary max-w-[200px]">{expLabel}</td>
+      <td className="px-3 py-2 text-xs text-secondary max-w-[150px] truncate">
+        {req.tipo_obra_valido || "\u2014"}
+      </td>
+      <td className="px-3 py-2 text-xs text-secondary max-w-[200px]">
+        {expMin?.cargos_similares_validos?.join(", ") || "\u2014"}
+      </td>
+    </tr>
   );
 }
 

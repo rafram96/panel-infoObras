@@ -3,11 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const NAV_ITEMS = [
+const NAV_MAIN = [
   { href: "/", icon: "dashboard", label: "Dashboard" },
-  { href: "/nuevo-analisis", icon: "query_stats", label: "Nuevo Analisis" },
+  { href: "/nuevo-analisis", icon: "query_stats", label: "Nuevo Análisis" },
   { href: "/historial", icon: "manage_search", label: "Historial" },
-  { href: "/configuracion", icon: "settings", label: "Configuracion" },
+] as const;
+
+const NAV_TOOLS = [
+  { href: "/herramientas/extraccion", icon: "person_search", label: "Profesionales" },
+  { href: "/herramientas/tdr", icon: "fact_check", label: "Requisitos TDR" },
+] as const;
+
+const NAV_FOOTER = [
+  { href: "/configuracion", icon: "settings", label: "Configuración" },
+] as const;
+
+// Flat list for mobile bottom nav (max 5 items)
+const NAV_MOBILE = [
+  ...NAV_MAIN,
+  { href: "/herramientas/extraccion", icon: "person_search", label: "Profesionales" },
+  { href: "/herramientas/tdr", icon: "fact_check", label: "TDR" },
 ] as const;
 
 export default function Sidebar() {
@@ -35,7 +50,63 @@ export default function Sidebar() {
 
           {/* Nav links */}
           <nav className="flex-1 px-3 space-y-1">
-            {NAV_ITEMS.map(({ href, icon, label }) => (
+            {NAV_MAIN.map(({ href, icon, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={
+                  isActive(href)
+                    ? "flex items-center px-3 h-10 bg-white text-primary font-bold border-l-4 border-primary transition-colors duration-150"
+                    : "flex items-center px-3 h-10 text-slate-600 hover:text-primary hover:bg-surface-container-high transition-colors duration-150"
+                }
+              >
+                <span
+                  className="material-symbols-outlined mr-3 text-[20px]"
+                  style={
+                    isActive(href)
+                      ? { fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }
+                      : undefined
+                  }
+                >
+                  {icon}
+                </span>
+                <span className="text-[0.8125rem] font-medium">{label}</span>
+              </Link>
+            ))}
+
+            {/* Herramientas section */}
+            <div className="pt-4 pb-1">
+              <span className="px-3 text-[0.6rem] font-bold uppercase tracking-[0.15rem] text-slate-400">
+                Herramientas
+              </span>
+            </div>
+            {NAV_TOOLS.map(({ href, icon, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={
+                  isActive(href)
+                    ? "flex items-center px-3 h-10 bg-white text-primary font-bold border-l-4 border-primary transition-colors duration-150"
+                    : "flex items-center px-3 h-10 text-slate-600 hover:text-primary hover:bg-surface-container-high transition-colors duration-150"
+                }
+              >
+                <span
+                  className="material-symbols-outlined mr-3 text-[20px]"
+                  style={
+                    isActive(href)
+                      ? { fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }
+                      : undefined
+                  }
+                >
+                  {icon}
+                </span>
+                <span className="text-[0.8125rem] font-medium">{label}</span>
+              </Link>
+            ))}
+
+            {/* Footer section */}
+            <div className="pt-4" />
+            {NAV_FOOTER.map(({ href, icon, label }) => (
               <Link
                 key={href}
                 href={href}
@@ -64,7 +135,7 @@ export default function Sidebar() {
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full h-16 bg-surface border-t border-outline-variant/10 flex justify-around items-center z-50">
-        {NAV_ITEMS.map(({ href, icon, label }) => (
+        {NAV_MOBILE.map(({ href, icon, label }) => (
           <Link
             key={href}
             href={href}
