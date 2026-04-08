@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
+import ConfirmModal from "@/components/ConfirmModal";
 import type { Job, JobStatus } from "@/lib/types";
 import { STATUS_LABEL, STATUS_BADGE } from "@/lib/helpers";
 
@@ -22,6 +23,7 @@ export default function HistorialPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // ── Fetch + poll ─────────────────────────────────────────────────────────
   const fetchJobs = useCallback(async () => {
@@ -43,16 +45,17 @@ export default function HistorialPage() {
   }, [fetchJobs]);
 
   // ── Delete handler ───────────────────────────────────────────────────────
-  const handleDelete = async (jobId: string) => {
-    if (!confirm("¿Eliminar este trabajo? Esta accion no se puede deshacer."))
-      return;
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
     try {
-      const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+      const res = await fetch(`/api/jobs/${deleteTarget}`, { method: "DELETE" });
       if (res.ok) {
-        setJobs((prev) => prev.filter((j) => j.id !== jobId));
+        setJobs((prev) => prev.filter((j) => j.id !== deleteTarget));
       }
     } catch {
       /* ignore */
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -232,7 +235,7 @@ export default function HistorialPage() {
                         visibility
                       </span>
                     </Link>
-                    <button onClick={() => handleDelete(job.id)}>
+                    <button onClick={() => setDeleteTarget(job.id)}>
                       <span className="material-symbols-outlined text-error text-lg hover:opacity-70">
                         delete
                       </span>
@@ -271,6 +274,16 @@ export default function HistorialPage() {
           <div className="text-3xl font-bold text-primary">{activeCount}</div>
         </div>
       </div>
+      {/* ── Delete confirmation modal ──────────────────────────────────── */}
+      <ConfirmModal
+        open={deleteTarget !== null}
+        title="Eliminar trabajo"
+        message="Esta acción eliminará el trabajo y todos sus archivos de resultado. No se puede deshacer."
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </PanelShell>
   );
 }
