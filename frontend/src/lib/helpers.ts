@@ -1,4 +1,22 @@
-import type { JobStatus, Bloque } from "./types";
+import type { JobStatus, JobType, Bloque } from "./types";
+
+export const JOB_TYPE_LABEL: Record<JobType, string> = {
+  extraction: "Profesionales",
+  tdr: "Requisitos TDR",
+  full: "Análisis Completo",
+};
+
+export const JOB_TYPE_BADGE: Record<JobType, string> = {
+  extraction: "bg-blue-50 text-blue-700 border border-blue-200",
+  tdr: "bg-violet-50 text-violet-700 border border-violet-200",
+  full: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+};
+
+export const JOB_TYPE_ICON: Record<JobType, string> = {
+  extraction: "person_search",
+  tdr: "fact_check",
+  full: "query_stats",
+};
 
 export const STATUS_LABEL: Record<JobStatus, string> = {
   pending: "En cola",

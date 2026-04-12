@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
 import ConfirmModal from "@/components/ConfirmModal";
-import type { Job, JobStatus } from "@/lib/types";
-import { STATUS_LABEL, STATUS_BADGE } from "@/lib/helpers";
+import type { Job, JobStatus, JobType } from "@/lib/types";
+import { STATUS_LABEL, STATUS_BADGE, JOB_TYPE_LABEL, JOB_TYPE_BADGE, JOB_TYPE_ICON } from "@/lib/helpers";
 
 // ── Filter options ───────────────────────────────────────────────────────────
 type FilterStatus = "all" | JobStatus;
+type FilterType = "all" | JobType;
 
 const STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: "all", label: "Todos" },
@@ -18,11 +19,19 @@ const STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
   { value: "pending", label: "En cola" },
 ];
 
+const TYPE_OPTIONS: { value: FilterType; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "extraction", label: "Profesionales" },
+  { value: "tdr", label: "Requisitos TDR" },
+  { value: "full", label: "Análisis Completo" },
+];
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+  const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // ── Fetch + poll ─────────────────────────────────────────────────────────
@@ -66,7 +75,9 @@ export default function HistorialPage() {
       job.filename.toLowerCase().includes(search.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || job.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesType =
+      typeFilter === "all" || job.job_type === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   // ── Stats ────────────────────────────────────────────────────────────────
@@ -96,6 +107,24 @@ export default function HistorialPage() {
             placeholder="Buscar por nombre de archivo..."
             className="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline/10 rounded-lg text-sm focus:ring-2 focus:ring-primary-fixed focus:border-primary-fixed outline-none transition-all"
           />
+        </div>
+
+        {/* Type dropdown */}
+        <div className="flex items-center gap-2">
+          <label className="text-[0.6875rem] font-bold uppercase tracking-wider text-outline">
+            Tipo
+          </label>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as FilterType)}
+            className="bg-surface-container-low border border-outline/10 rounded-lg text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-primary-fixed"
+          >
+            {TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Status dropdown */}
@@ -129,6 +158,9 @@ export default function HistorialPage() {
                 Archivo
               </th>
               <th className="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">
+                Tipo
+              </th>
+              <th className="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">
                 Estado
               </th>
               <th className="px-4 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant text-center">
@@ -147,7 +179,7 @@ export default function HistorialPage() {
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-12 text-center text-sm text-on-surface-variant"
                 >
                   {jobs.length === 0
@@ -178,6 +210,20 @@ export default function HistorialPage() {
                     <div className="text-xs font-bold text-primary truncate max-w-[260px]">
                       {job.filename}
                     </div>
+                  </td>
+
+                  {/* Tipo */}
+                  <td className="px-4 py-4">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.625rem] font-bold ${
+                        JOB_TYPE_BADGE[job.job_type || "extraction"]
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[0.75rem]">
+                        {JOB_TYPE_ICON[job.job_type || "extraction"]}
+                      </span>
+                      {JOB_TYPE_LABEL[job.job_type || "extraction"]}
+                    </span>
                   </td>
 
                   {/* Estado */}
