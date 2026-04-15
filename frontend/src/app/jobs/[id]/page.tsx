@@ -66,16 +66,85 @@ export default function JobDetailPage({
     }
   }, [detail?.job_type]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Adaptive polling: 3s when active, 10s when idle ─────────────────────
+  // ── WebSocket for real-time progress, polling as fallback ────────────────
   useEffect(() => {
     if (!detail) return;
     const isActive =
       detail.status === "pending" || detail.status === "running";
-    const pollMs = isActive ? 3_000 : 10_000;
 
-    const interval = setInterval(fetchDetail, pollMs);
-    return () => clearInterval(interval);
-  }, [detail?.status, fetchDetail]);
+    if (!isActive) {
+      // Job terminado — polling lento por si hay actualizaciones
+      const interval = setInterval(fetchDetail, 10_000);
+      return () => clearInterval(interval);
+    }
+
+    // Intentar WebSocket para progreso en tiempo real
+    let ws: WebSocket | null = null;
+    let fallbackInterval: ReturnType<typeof setInterval> | null = null;
+    let wsConnected = false;
+
+    try {
+      const wsUrl = `ws://${window.location.hostname}:8000/ws/jobs/${id}`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        wsConnected = true;
+        // Cancelar polling si WS conectó
+        if (fallbackInterval) {
+          clearInterval(fallbackInterval);
+          fallbackInterval = null;
+        }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.error) return;
+          setDetail((prev) => prev ? {
+            ...prev,
+            status: data.status,
+            progress_pct: data.progress_pct,
+            progress_stage: data.progress_stage,
+            started_at: data.started_at ?? prev.started_at,
+          } : prev);
+          // Si terminó, fetch completo para obtener result
+          if (data.status === "done" || data.status === "error") {
+            fetchDetail();
+          }
+        } catch { /* ignore parse errors */ }
+      };
+
+      ws.onerror = () => {
+        // WS falló — activar polling
+        if (!fallbackInterval) {
+          fallbackInterval = setInterval(fetchDetail, 3_000);
+        }
+      };
+
+      ws.onclose = () => {
+        wsConnected = false;
+        // Si el job sigue activo y WS se cerró, activar polling
+        if (!fallbackInterval) {
+          fallbackInterval = setInterval(fetchDetail, 3_000);
+        }
+      };
+    } catch {
+      // WebSocket no soportado — usar polling
+    }
+
+    // Polling como fallback inmediato (se cancela si WS conecta)
+    if (!wsConnected) {
+      fallbackInterval = setInterval(fetchDetail, 3_000);
+    }
+
+    return () => {
+      if (ws) {
+        ws.onclose = null; // evitar que el cleanup active polling
+        ws.close();
+      }
+      if (fallbackInterval) clearInterval(fallbackInterval);
+    };
+  }, [detail?.status, id, fetchDetail]);
 
   // ── Elapsed timer (only counts from started_at, not queue time) ─────────
   useEffect(() => {
