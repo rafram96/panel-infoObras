@@ -433,52 +433,23 @@ export default function JobDetailPage({
             </div>
           </div>
 
-          {/* Job logs (debug) */}
-          {detail.logs && (
-            <details className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
-              <summary className="px-5 py-3 cursor-pointer hover:bg-surface-container-low transition-colors flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary text-sm">terminal</span>
-                <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-secondary">
-                  Logs del procesamiento
-                </span>
-              </summary>
-              <pre className="px-5 py-3 text-[0.6875rem] text-on-surface-variant font-mono leading-relaxed whitespace-pre-wrap border-t border-outline-variant/10 bg-surface-container-low max-h-60 overflow-y-auto">
-                {detail.logs}
-              </pre>
-            </details>
-          )}
         </div>
       )}
 
       {/* ── ERROR VIEW ───────────────────────────────────────────────────── */}
       {isError && (
-        <div className="space-y-4">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-3">
-            <span className="material-symbols-outlined text-red-600 text-xl mt-0.5">
-              error
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-red-700 mb-1">
-                El análisis terminó con error
-              </p>
-              <p className="text-sm text-red-600">
-                {detail.error ?? "Error desconocido durante el procesamiento."}
-              </p>
-            </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-3">
+          <span className="material-symbols-outlined text-red-600 text-xl mt-0.5">
+            error
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-red-700 mb-1">
+              El análisis terminó con error
+            </p>
+            <p className="text-sm text-red-600">
+              {detail.error ?? "Error desconocido durante el procesamiento."}
+            </p>
           </div>
-          {detail.logs && (
-            <details open className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
-              <summary className="px-5 py-3 cursor-pointer hover:bg-surface-container-low transition-colors flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary text-sm">terminal</span>
-                <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-secondary">
-                  Logs del procesamiento
-                </span>
-              </summary>
-              <pre className="px-5 py-3 text-[0.6875rem] text-on-surface-variant font-mono leading-relaxed whitespace-pre-wrap border-t border-outline-variant/10 bg-surface-container-low max-h-60 overflow-y-auto">
-                {detail.logs}
-              </pre>
-            </details>
-          )}
         </div>
       )}
 
