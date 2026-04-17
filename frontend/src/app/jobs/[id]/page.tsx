@@ -4,7 +4,7 @@ import { use, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 import PanelShell from "@/components/PanelShell";
-import type { JobDetail, Seccion, ExtractionResult, TdrResult, RequisitoPersonal } from "@/lib/types";
+import type { Job, JobDetail, Seccion, ExtractionResult, TdrResult, RequisitoPersonal } from "@/lib/types";
 import {
   STATUS_LABEL,
   STATUS_BADGE,
@@ -37,6 +37,12 @@ export default function JobDetailPage({
     "profesionales",
   );
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [logsOpen, setLogsOpen] = useState(false);
+  const [evalModalOpen, setEvalModalOpen] = useState(false);
+  const [tdrJobs, setTdrJobs] = useState<Job[]>([]);
+  const [selectedTdr, setSelectedTdr] = useState<string | null>(null);
+  const [evaluating, setEvaluating] = useState(false);
+  const [evalError, setEvalError] = useState<string | null>(null);
 
   // ── Fetch detail ────────────────────────────────────────────────────────
   const fetchDetail = useCallback(async () => {
@@ -65,6 +71,20 @@ export default function JobDetailPage({
       setActiveTab("requisitos");
     }
   }, [detail?.job_type]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Load TDR jobs when eval modal opens ────────────────────────────────
+  useEffect(() => {
+    if (!evalModalOpen) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/jobs");
+        if (res.ok) {
+          const all: Job[] = await res.json();
+          setTdrJobs(all.filter((j) => j.job_type === "tdr" && j.status === "done"));
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [evalModalOpen]);
 
   // ── WebSocket for real-time progress, polling as fallback ────────────────
   useEffect(() => {
@@ -245,18 +265,32 @@ export default function JobDetailPage({
 
         {isDone && (
           <>
-            <button className="inline-flex items-center gap-1.5 primary-gradient text-white text-xs font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90">
-              <span className="material-symbols-outlined text-base">
-                picture_as_pdf
-              </span>
-              Exportar PDF
-            </button>
-            <button className="inline-flex items-center gap-1.5 bg-surface-container-high text-primary text-xs font-semibold px-4 py-2 rounded-lg border border-outline-variant/20 transition-colors hover:bg-surface-container-highest">
-              <span className="material-symbols-outlined text-base">
+            {/* Descargar Excel — disponible para jobs full o tras evaluar RTM */}
+            {(detail.job_type === "full" || detail.job_type === "extraction") && (
+              <a
+                href={`/api/jobs/${id}/excel`}
                 download
-              </span>
-              Descargar Reportes
-            </button>
+                className="inline-flex items-center gap-1.5 primary-gradient text-white text-xs font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90"
+              >
+                <span className="material-symbols-outlined text-base">
+                  download
+                </span>
+                Descargar Excel
+              </a>
+            )}
+
+            {/* Evaluar RTM — solo para jobs extraction (para generar Excel) */}
+            {detail.job_type === "extraction" && (
+              <button
+                onClick={() => setEvalModalOpen(true)}
+                className="inline-flex items-center gap-1.5 bg-surface-container-high text-primary text-xs font-semibold px-4 py-2 rounded-lg border border-outline-variant/20 transition-colors hover:bg-surface-container-highest"
+              >
+                <span className="material-symbols-outlined text-base">
+                  fact_check
+                </span>
+                Evaluar RTM
+              </button>
+            )}
           </>
         )}
       </div>
@@ -606,6 +640,150 @@ export default function JobDetailPage({
           </>
         );
       })()}
+
+      {/* ── Visor de logs (colapsable) ───────────────────────────────────── */}
+      {detail.logs && (
+        <section className="mt-8 bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+          <button
+            onClick={() => setLogsOpen(!logsOpen)}
+            className="w-full px-5 py-3 border-b border-outline-variant/10 flex items-center justify-between hover:bg-surface-container-high/40 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-lg">
+                terminal
+              </span>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
+                Logs del procesamiento
+              </h4>
+              <span className="text-[10px] text-slate-400">
+                ({(detail.logs.match(/\n/g) || []).length} líneas)
+              </span>
+            </div>
+            <span className={`material-symbols-outlined text-lg transition-transform ${logsOpen ? "rotate-180" : ""}`}>
+              expand_more
+            </span>
+          </button>
+
+          {logsOpen && (
+            <pre className="p-4 bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
+              {detail.logs}
+            </pre>
+          )}
+        </section>
+      )}
+
+      {/* ── Modal Evaluar RTM ───────────────────────────────────────────── */}
+      {evalModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          onClick={() => !evaluating && setEvalModalOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-surface-container-lowest rounded-xl shadow-xl border border-outline-variant/20 w-full max-w-lg mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 pt-6 pb-4 border-b border-outline-variant/10">
+              <h3 className="text-base font-bold text-on-surface">
+                Evaluar RTM contra bases del concurso
+              </h3>
+              <p className="text-sm text-on-surface-variant mt-1">
+                Selecciona un job TDR (bases procesadas) para cruzar con los profesionales de este job.
+              </p>
+            </div>
+
+            <div className="p-6 max-h-96 overflow-y-auto">
+              {tdrJobs.length === 0 ? (
+                <div className="text-center py-8 text-sm text-on-surface-variant">
+                  <span className="material-symbols-outlined text-4xl text-outline mb-2 block">
+                    inbox
+                  </span>
+                  No hay jobs TDR completados. Procesa primero las bases del concurso en
+                  <Link href="/herramientas/tdr" className="text-primary underline ml-1">
+                    /herramientas/tdr
+                  </Link>.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {tdrJobs.map((j) => (
+                    <label
+                      key={j.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selectedTdr === j.id
+                          ? "border-primary bg-primary-fixed/10"
+                          : "border-outline-variant/20 hover:bg-surface-container-high/40"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="tdr"
+                        checked={selectedTdr === j.id}
+                        onChange={() => setSelectedTdr(j.id)}
+                        className="accent-primary"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-primary truncate">
+                          {j.filename}
+                        </div>
+                        <div className="text-xs text-on-surface-variant">
+                          {j.profesionales_count ? `${j.profesionales_count} cargos` : "—"} · {j.created_at?.slice(0, 10)}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {evalError && (
+                <div className="mt-4 p-3 bg-error-container/30 border border-error/20 rounded-lg text-sm text-error">
+                  {evalError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-outline-variant/10">
+              <button
+                onClick={() => setEvalModalOpen(false)}
+                disabled={evaluating}
+                className="px-4 py-2 text-sm font-bold text-on-surface hover:bg-surface-container-high transition-all rounded-lg disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  if (!selectedTdr) return;
+                  setEvaluating(true);
+                  setEvalError(null);
+                  try {
+                    const fd = new FormData();
+                    fd.append("tdr_job_id", selectedTdr);
+                    const res = await fetch(`/api/jobs/${id}/evaluate`, {
+                      method: "POST",
+                      body: fd,
+                    });
+                    if (!res.ok) {
+                      const body = await res.json().catch(() => null);
+                      throw new Error(body?.detail ?? `Error ${res.status}`);
+                    }
+                    setEvalModalOpen(false);
+                    fetchDetail();
+                    // Descargar Excel
+                    window.location.href = `/api/jobs/${id}/excel`;
+                  } catch (err: unknown) {
+                    setEvalError(err instanceof Error ? err.message : "Error");
+                  } finally {
+                    setEvaluating(false);
+                  }
+                }}
+                disabled={!selectedTdr || evaluating}
+                className="px-5 py-2 text-sm font-extrabold uppercase tracking-wider rounded-lg primary-gradient text-white disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {evaluating ? "Evaluando..." : "Generar Excel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PanelShell>
   );
 }
