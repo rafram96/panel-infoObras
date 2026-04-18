@@ -43,6 +43,7 @@ export default function JobDetailPage({
   const [selectedTdr, setSelectedTdr] = useState<string | null>(null);
   const [evaluating, setEvaluating] = useState(false);
   const [evalError, setEvalError] = useState<string | null>(null);
+  const [excelExists, setExcelExists] = useState(false);
 
   // ── Fetch detail ────────────────────────────────────────────────────────
   const fetchDetail = useCallback(async () => {
@@ -71,6 +72,23 @@ export default function JobDetailPage({
       setActiveTab("requisitos");
     }
   }, [detail?.job_type]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Check if Excel exists whenever detail updates ──────────────────────
+  useEffect(() => {
+    if (!detail || detail.status !== "done") {
+      setExcelExists(false);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch(`/api/jobs/${id}/excel/exists`);
+        if (res.ok) {
+          const data = await res.json();
+          setExcelExists(Boolean(data.exists));
+        }
+      } catch { setExcelExists(false); }
+    })();
+  }, [detail?.status, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load TDR jobs when eval modal opens ────────────────────────────────
   useEffect(() => {
@@ -265,8 +283,8 @@ export default function JobDetailPage({
 
         {isDone && (
           <>
-            {/* Descargar Excel — disponible para jobs full o tras evaluar RTM */}
-            {(detail.job_type === "full" || detail.job_type === "extraction") && (
+            {/* Descargar Excel — solo si existe el archivo */}
+            {excelExists && (
               <a
                 href={`/api/jobs/${id}/excel`}
                 download
@@ -279,7 +297,8 @@ export default function JobDetailPage({
               </a>
             )}
 
-            {/* Evaluar RTM — solo para jobs extraction (para generar Excel) */}
+            {/* Evaluar RTM — solo para jobs extraction (para generar Excel).
+                Si ya existe Excel, permite re-evaluar con otro TDR. */}
             {detail.job_type === "extraction" && (
               <button
                 onClick={() => setEvalModalOpen(true)}
@@ -288,7 +307,7 @@ export default function JobDetailPage({
                 <span className="material-symbols-outlined text-base">
                   fact_check
                 </span>
-                Evaluar RTM
+                {excelExists ? "Re-evaluar RTM" : "Evaluar RTM"}
               </button>
             )}
           </>
@@ -737,6 +756,7 @@ export default function JobDetailPage({
                       throw new Error(body?.detail ?? `Error ${res.status}`);
                     }
                     setEvalModalOpen(false);
+                    setExcelExists(true);
                     fetchDetail();
                     // Descargar Excel
                     window.location.href = `/api/jobs/${id}/excel`;
