@@ -63,9 +63,11 @@ export interface ExtractionResult {
   total_pages: number;
   pages_paddle: number;
   pages_qwen: number;
+  pages_pdfplumber?: number;
   pages_error: number;
   conf_promedio: number;
   tiempo_total: number;
+  engine?: "motor_ocr" | "pdfplumber";
   secciones: Seccion[];
 }
 

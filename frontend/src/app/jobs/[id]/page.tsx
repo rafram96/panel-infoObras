@@ -495,14 +495,23 @@ export default function JobDetailPage({
                   Detalle de Motor OCR
                 </p>
                 <div className="flex flex-wrap gap-3">
-                  <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-blue-200">
-                    <span className="material-symbols-outlined text-sm">memory</span>
-                    PaddleOCR: {r.pages_paddle} págs
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 bg-violet-50 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-violet-200">
-                    <span className="material-symbols-outlined text-sm">auto_awesome</span>
-                    Qwen-VL: {r.pages_qwen} págs
-                  </span>
+                  {r.engine === "pdfplumber" ? (
+                    <span className="inline-flex items-center gap-1.5 bg-fuchsia-50 text-fuchsia-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-fuchsia-200">
+                      <span className="material-symbols-outlined text-sm">bolt</span>
+                      pdfplumber (fast-path): {r.pages_pdfplumber ?? r.total_pages} págs
+                    </span>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-blue-200">
+                        <span className="material-symbols-outlined text-sm">memory</span>
+                        PaddleOCR: {r.pages_paddle} págs
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 bg-violet-50 text-violet-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-violet-200">
+                        <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                        Qwen-VL: {r.pages_qwen} págs
+                      </span>
+                    </>
+                  )}
                   {r.pages_error > 0 && (
                     <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200">
                       <span className="material-symbols-outlined text-sm">error</span>

@@ -29,7 +29,10 @@ El panel no llama a motor-OCR directamente — lo hace a través del backend (Fa
 | Modo | Descripción | Cuándo usarlo |
 |---|---|---|
 | `ocr_only` | Extrae texto, sin segmentar por profesional | Cuando solo se necesita el texto del documento |
-| `segmentation` | Extrae texto + identifica secciones por cargo | Para procesar propuestas técnicas completas |
+| `segmentation` | PaddleOCR + Qwen-VL + segmentación por cargo | Propuestas escaneadas |
+| `pdfplumber_segmentation` | Fast-path: pdfplumber + qwen2.5:14b texto-only | Propuestas digitales (texto nativo). Decide Alpamayo muestreando chars/pág. |
+
+El mode se elige en Alpamayo (backend `_decidir_mode`), el Panel no lo escoge directamente. El usuario solo puede forzar motor-OCR completo (checkbox "Forzar motor-OCR" en `/nuevo-analisis`).
 
 ---
 
@@ -71,15 +74,17 @@ interface OcrOnlyResult {
 
 ```ts
 interface SegmentationResult {
-  mode: "segmentation"
+  mode: "segmentation" | "pdfplumber_segmentation"
   doc: {
     total_pages: number
     pages_paddle: number
     pages_qwen: number
+    pages_pdfplumber: number      // 0 cuando engine="motor_ocr"
     pages_error: number
     conf_promedio_documento: number
     tiempo_total: number
     full_text: string
+    engine: "motor_ocr" | "pdfplumber"
   }
   secciones: ProfessionalSection[]
 }
@@ -116,9 +121,14 @@ El panel puede ofrecer descarga de estos archivos como reportes.
 
 | Escenario | Tiempo aproximado |
 |---|---|
-| Documento pequeño (< 50 páginas) | 5–15 min |
-| Propuesta típica (200–400 páginas) | 40–100 min |
-| Documento grande (390 páginas) | ~1h 40min |
+| Documento pequeño escaneado (< 50 págs) | 5–15 min |
+| Propuesta escaneada típica (200–400 págs) | 40–100 min |
+| Documento escaneado grande (390 págs) | ~1h 40min |
+| Propuesta **digital** (fast-path pdfplumber, cualquier tamaño razonable) | < 15 min |
+
+### Badge de engine en `/jobs/[id]` (tab Métricas)
+- `r.engine === "pdfplumber"` → badge fuchsia `pdfplumber (fast-path): N págs`.
+- `r.engine === "motor_ocr"` (default) → badges `PaddleOCR: N págs` + `Qwen-VL: N págs`.
 
 **El procesamiento es asíncrono obligatoriamente.** El flujo debe ser:
 1. Usuario sube PDF → recibe un job ID

@@ -132,7 +132,7 @@ export default function NuevoAnalisisPage() {
       if (items) fd.append("items", items);
       if (pagesFrom) fd.append("pages_from", pagesFrom);
       if (pagesTo) fd.append("pages_to", pagesTo);
-      if (forceOcr) fd.append("force_ocr", "true");
+      if (forceOcr) fd.append("force_motor_ocr", "true");
 
       const res = await fetch("/api/jobs", { method: "POST", body: fd });
 
@@ -323,10 +323,11 @@ export default function NuevoAnalisisPage() {
                         info
                       </span>
                       <p className="text-[0.75rem] leading-relaxed text-on-secondary-container">
-                        <span className="font-bold">Nota:</span> Forzar el OCR
-                        aumentará la precisión en documentos con sellos o
-                        tachaduras, pero el tiempo de procesamiento podría
-                        extenderse hasta 3 minutos adicionales.
+                        <span className="font-bold">Nota:</span> Forzar motor-OCR
+                        desactiva el fast-path con pdfplumber. Actívalo si el
+                        PDF es digital pero necesita un análisis visual (sellos,
+                        tablas escaneadas, tachaduras) o si el fast-path detectó
+                        menos profesionales de los esperados.
                       </p>
                     </div>
                   </div>

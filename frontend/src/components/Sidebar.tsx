@@ -13,6 +13,11 @@ const NAV_TOOLS = [
   { href: "/herramientas/extraccion", icon: "person_search", label: "Profesionales" },
   { href: "/herramientas/tdr", icon: "fact_check", label: "Requisitos TDR" },
   { href: "/herramientas/infoobras", icon: "domain", label: "InfoObras" },
+  { href: "/herramientas/debug-pdfplumber", icon: "bug_report", label: "Debug pdfplumber" },
+] as const;
+
+const NAV_INFO = [
+  { href: "/info/alertas", icon: "warning", label: "Alertas" },
 ] as const;
 
 // Flat list for mobile bottom nav (max 5 items)
@@ -78,6 +83,36 @@ export default function Sidebar() {
               </span>
             </div>
             {NAV_TOOLS.map(({ href, icon, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className={
+                  isActive(href)
+                    ? "flex items-center px-3 h-10 bg-white text-primary font-bold border-l-4 border-primary transition-colors duration-150"
+                    : "flex items-center px-3 h-10 text-slate-600 hover:text-primary hover:bg-surface-container-high transition-colors duration-150"
+                }
+              >
+                <span
+                  className="material-symbols-outlined mr-3 text-[20px]"
+                  style={
+                    isActive(href)
+                      ? { fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }
+                      : undefined
+                  }
+                >
+                  {icon}
+                </span>
+                <span className="text-[0.8125rem] font-medium">{label}</span>
+              </Link>
+            ))}
+
+            {/* Información section */}
+            <div className="pt-4 pb-1">
+              <span className="px-3 text-[0.6rem] font-bold uppercase tracking-[0.15rem] text-slate-400">
+                Información
+              </span>
+            </div>
+            {NAV_INFO.map(({ href, icon, label }) => (
               <Link
                 key={href}
                 href={href}
