@@ -637,6 +637,32 @@ export default function JobDetailPage({
                     Requisitos por Cargo Profesional
                   </h2>
                 </div>
+
+                {(() => {
+                  const flagged = r.rtm_personal.filter((x) => x._needs_review);
+                  if (flagged.length === 0) return null;
+                  return (
+                    <div className="mx-5 mt-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <span className="material-symbols-outlined text-red-600 text-base shrink-0 mt-0.5">
+                          warning
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-[0.8125rem] font-bold text-red-800">
+                            {flagged.length} cargo{flagged.length !== 1 ? "s" : ""} requieren revisión manual
+                          </p>
+                          <p className="text-[0.75rem] text-red-700 leading-relaxed mt-1">
+                            El sistema detectó posible alucinación del LLM: cargos cuyo nombre
+                            no aparece en el texto fuente, o con patrón copy-paste formulaico
+                            (mismas profesiones/cargos similares entre varios ítems). Revisa
+                            los ítems marcados con <span className="material-symbols-outlined text-sm align-middle">warning</span> antes de usar estos datos.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-surface-container-high">
@@ -957,11 +983,39 @@ function TdrRequisitoRow({
   const expLabel = meses
     ? `${meses} meses${expMin?.descripcion ? ` — ${expMin.descripcion.slice(0, 80)}` : ""}`
     : "\u2014";
+  const needsReview = Boolean(req._needs_review);
+  const reviewReason = req._review_reason || "Marcado para revisión manual";
 
   return (
-    <tr className="hover:bg-surface-container-high/40 transition-colors">
+    <tr
+      className={
+        "transition-colors " +
+        (needsReview
+          ? "bg-red-50/60 hover:bg-red-50 border-l-4 border-red-500"
+          : "hover:bg-surface-container-high/40")
+      }
+    >
       <td className="px-3 py-2 text-xs text-secondary font-mono">{index + 1}</td>
-      <td className="px-3 py-2 text-sm text-primary font-medium">{req.cargo}</td>
+      <td className="px-3 py-2 text-sm font-medium">
+        <div className="flex items-center gap-2">
+          {needsReview && (
+            <span
+              className="material-symbols-outlined text-red-600 text-base shrink-0"
+              title={reviewReason}
+            >
+              warning
+            </span>
+          )}
+          <span className={needsReview ? "text-red-700" : "text-primary"}>
+            {req.cargo}
+          </span>
+        </div>
+        {needsReview && (
+          <p className="text-[0.6875rem] text-red-600 mt-1 leading-tight">
+            {reviewReason}
+          </p>
+        )}
+      </td>
       <td className="px-3 py-2 text-xs text-secondary">
         {req.profesiones_aceptadas?.join(", ") || "\u2014"}
       </td>

@@ -92,6 +92,10 @@ export interface RequisitoPersonal {
   tiempo_adicional_factores: string | null;
   capacitacion: Record<string, unknown> | null;
   pagina: number | null;
+  // Campos de diagnóstico del backend (posibles alucinaciones LLM)
+  _needs_review?: boolean;
+  _review_reason?: string;
+  _vl_source?: boolean;
 }
 
 export interface FactorEvaluacion {

@@ -671,9 +671,20 @@ export default function DebugPdfplumberPage() {
             {/* ── RTM Personal detectado (TDR) ──────────────────── */}
             {isTdr && resultTdr?.rtm_personal && resultTdr.rtm_personal.length > 0 && (
               <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/10 shadow-ambient mb-6 overflow-x-auto">
-                <h3 className="text-[0.75rem] font-bold uppercase tracking-wider text-primary mb-3">
-                  Cargos RTM detectados ({resultTdr.rtm_personal.length})
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-[0.75rem] font-bold uppercase tracking-wider text-primary">
+                    Cargos RTM detectados ({resultTdr.rtm_personal.length})
+                  </h3>
+                  {(() => {
+                    const flagged = resultTdr.rtm_personal.filter((x) => x._needs_review).length;
+                    return flagged > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-[0.6875rem] font-bold bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded">
+                        <span className="material-symbols-outlined text-sm">warning</span>
+                        {flagged} marcado{flagged !== 1 ? "s" : ""} para revisión
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
                 <table className="w-full text-left text-sm">
                   <thead className="bg-surface-container-high">
                     <tr>
@@ -685,22 +696,39 @@ export default function DebugPdfplumberPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/10">
-                    {resultTdr.rtm_personal.map((r, i) => (
-                      <tr key={i}>
-                        <td className="px-3 py-2 font-mono">{i + 1}</td>
-                        <td className="px-3 py-2 font-medium">{r.cargo}</td>
-                        <td className="px-3 py-2 font-mono text-[0.6875rem]">{r.anos_colegiado ?? "—"}</td>
-                        <td className="px-3 py-2 text-[0.6875rem]">
-                          {r.experiencia_minima
-                            ? `${r.experiencia_minima.cantidad ?? "—"} ${r.experiencia_minima.unidad ?? ""}`
-                            : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-[0.6875rem] text-outline">{r.tipo_obra_valido ?? "—"}</td>
-                        <td className="px-3 py-2 text-[0.6875rem] text-outline truncate max-w-[240px]">
-                          {r.profesiones_aceptadas?.join(", ") ?? "—"}
-                        </td>
-                      </tr>
-                    ))}
+                    {resultTdr.rtm_personal.map((r, i) => {
+                      const flag = Boolean(r._needs_review);
+                      return (
+                        <tr
+                          key={i}
+                          className={flag ? "bg-red-50/60 border-l-4 border-red-500" : ""}
+                          title={flag ? r._review_reason : undefined}
+                        >
+                          <td className="px-3 py-2 font-mono">{i + 1}</td>
+                          <td className="px-3 py-2 font-medium">
+                            <div className="flex items-center gap-1.5">
+                              {flag && (
+                                <span className="material-symbols-outlined text-red-600 text-sm">warning</span>
+                              )}
+                              <span className={flag ? "text-red-700" : ""}>{r.cargo}</span>
+                            </div>
+                            {flag && r._review_reason && (
+                              <p className="text-[0.625rem] text-red-600 mt-0.5 leading-tight">{r._review_reason}</p>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-[0.6875rem]">{r.anos_colegiado ?? "—"}</td>
+                          <td className="px-3 py-2 text-[0.6875rem]">
+                            {r.experiencia_minima
+                              ? `${r.experiencia_minima.cantidad ?? "—"} ${r.experiencia_minima.unidad ?? ""}`
+                              : "—"}
+                          </td>
+                          <td className="px-3 py-2 text-[0.6875rem] text-outline">{r.tipo_obra_valido ?? "—"}</td>
+                          <td className="px-3 py-2 text-[0.6875rem] text-outline truncate max-w-[240px]">
+                            {r.profesiones_aceptadas?.join(", ") ?? "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
