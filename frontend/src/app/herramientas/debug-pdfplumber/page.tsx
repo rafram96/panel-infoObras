@@ -217,15 +217,35 @@ export default function DebugPdfplumberPage() {
     navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
   };
 
-  const handleDownloadLogs = () => {
-    if (!detail?.logs) return;
-    const blob = new Blob([detail.logs], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `job-${jobId}-logs.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownloadLogs = async () => {
+    if (!jobId) return;
+    // Preferir el archivo dedicado (logs completos incluyendo librerias).
+    // Si no existe, caer al campo DB (hitos resumidos).
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/log`);
+      if (res.ok) {
+        const txt = await res.text();
+        const blob = new Blob([txt], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `job-${jobId}.log`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+    } catch {
+      /* fallback a detail.logs */
+    }
+    if (detail?.logs) {
+      const blob = new Blob([detail.logs], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `job-${jobId}-logs.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────
