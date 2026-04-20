@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import PanelShell from "@/components/PanelShell";
 import PdfDropzone from "@/components/PdfDropzone";
-import type { JobDetail, ExtractionResult } from "@/lib/types";
+import type { JobDetail, ExtractionResult, TdrResult } from "@/lib/types";
 import { formatSeconds } from "@/lib/helpers";
 
 // ── Tipos locales ────────────────────────────────────────────────────────────
@@ -26,11 +26,14 @@ interface LogLine {
 function classifyLog(line: string): LogLevel {
   const l = line.toLowerCase();
   if (l.includes("error")) return "error";
-  if (l.includes("fallback") || l.includes("warn") || l.includes("timeout")) return "warn";
-  if (l.includes("fast-path") || l.includes("pdf digital") || l.includes("pdf escaneado") ||
-      l.includes("forzando motor-ocr") || l.includes("muestra primeras")) return "decision";
+  if (l.includes("fallback") || l.includes("warn") || l.includes("timeout") ||
+      l.includes("insuficiente") || l.includes("escaneado")) return "warn";
+  if (l.includes("fast-path") || l.includes("pdf digital") ||
+      l.includes("forzando motor-ocr") || l.includes("muestra primeras") ||
+      l.includes("chars/pág") || l.includes("pdfplumber:")) return "decision";
   if (l.startsWith("fase") || l.includes("iniciando") || l.includes("completado") ||
-      l.includes("invocando wrapper")) return "stage";
+      l.includes("invocando wrapper") || l.includes("extracción llm") ||
+      l.includes("llamando a extraer_bases")) return "stage";
   return "info";
 }
 
@@ -66,9 +69,12 @@ function LOG_COLOR(level: LogLevel): string {
   }
 }
 
+type DebugJobType = "extraction" | "tdr";
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function DebugPdfplumberPage() {
   // Form
+  const [jobType, setJobType] = useState<DebugJobType>("extraction");
   const [file, setFile] = useState<File | null>(null);
   const [pagesFrom, setPagesFrom] = useState("");
   const [pagesTo, setPagesTo] = useState("");
@@ -91,10 +97,17 @@ export default function DebugPdfplumberPage() {
 
   // Derived
   const logs = useMemo(() => parseLogs(detail?.logs), [detail?.logs]);
-  const result = detail?.result as ExtractionResult | null | undefined;
+  const detailJobType = (detail?.job_type as DebugJobType | undefined) ?? jobType;
+  const isTdr = detailJobType === "tdr";
+  const resultExtraction = !isTdr
+    ? (detail?.result as ExtractionResult | null | undefined)
+    : undefined;
+  const resultTdr = isTdr
+    ? (detail?.result as TdrResult | null | undefined)
+    : undefined;
   const isActive = detail?.status === "pending" || detail?.status === "running";
   const isDone = detail?.status === "done";
-  const engine = (result?.engine as string | undefined) ?? "—";
+  const engine = (resultExtraction?.engine as string | undefined) ?? "—";
 
   // Poll job detail
   useEffect(() => {
@@ -152,10 +165,10 @@ export default function DebugPdfplumberPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("job_type", "extraction");
+      fd.append("job_type", jobType);
       if (pagesFrom) fd.append("pages_from", pagesFrom);
       if (pagesTo) fd.append("pages_to", pagesTo);
-      if (forceMotorOcr) fd.append("force_motor_ocr", "true");
+      if (forceMotorOcr && jobType === "extraction") fd.append("force_motor_ocr", "true");
 
       const res = await fetch("/api/jobs", { method: "POST", body: fd });
       if (!res.ok) {
@@ -199,8 +212,9 @@ export default function DebugPdfplumberPage() {
   };
 
   const handleCopyJson = () => {
-    if (!result) return;
-    navigator.clipboard.writeText(JSON.stringify(result, null, 2));
+    const payload = resultExtraction ?? resultTdr;
+    if (!payload) return;
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
   };
 
   const handleDownloadLogs = () => {
@@ -219,7 +233,7 @@ export default function DebugPdfplumberPage() {
     <PanelShell title="Debug pdfplumber fast-path" subtitle="Herramientas · Diagnóstico">
       <div className="max-w-[1400px] mx-auto p-6 lg:p-10">
         {/* Header */}
-        <div className="mb-8 border-l-4 border-fuchsia-500 pl-6">
+        <div className="mb-6 border-l-4 border-fuchsia-500 pl-6">
           <span className="text-[0.6875rem] font-bold uppercase tracking-[0.15rem] text-fuchsia-600">
             Herramienta de Diagnóstico
           </span>
@@ -227,11 +241,64 @@ export default function DebugPdfplumberPage() {
             Debug pdfplumber fast-path
           </h2>
           <p className="text-on-surface-variant text-sm mt-2 max-w-3xl">
-            Visor de consola completo para analizar el pipeline OCR. Muestra decisión de mode
-            (pdfplumber vs motor-OCR), logs en tiempo real, archivos <code>.md</code> generados,
-            secciones detectadas y el JSON crudo del wrapper.
+            Visor de consola completo para analizar el pipeline OCR sobre jobs de
+            Profesionales (propuesta técnica) y TDR (bases del concurso). Logs en
+            tiempo real, decisión de mode, archivos generados y resultado crudo.
           </p>
         </div>
+
+        {/* ── Panel explicativo (fast-path) ───────────────────────────── */}
+        <details className="mb-6 bg-fuchsia-50/40 border border-fuchsia-200 rounded-xl overflow-hidden group">
+          <summary className="flex items-center gap-2 px-5 py-3 cursor-pointer hover:bg-fuchsia-50 transition-colors list-none">
+            <span className="material-symbols-outlined text-fuchsia-600 text-base">bolt</span>
+            <span className="text-[0.8125rem] font-bold text-fuchsia-800">
+              ¿Qué es el fast-path? (click para expandir)
+            </span>
+            <span className="material-symbols-outlined text-fuchsia-600 text-sm ml-auto group-open:rotate-180 transition-transform">
+              expand_more
+            </span>
+          </summary>
+          <div className="px-5 py-4 border-t border-fuchsia-200 space-y-3 text-[0.8125rem] text-slate-700 leading-relaxed">
+            <p>
+              Tradicionalmente, todo PDF subido pasa por <strong>motor-OCR</strong> (PaddleOCR +
+              Qwen-VL). Para una propuesta escaneada de 2300 páginas eso toma 2-3 horas. El
+              fast-path detecta si el PDF es <strong>digital</strong> (capa de texto nativa) y
+              evita motor-OCR usando <code>pdfplumber</code> directamente.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-white border border-fuchsia-200 rounded-lg p-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-widest text-fuchsia-700 mb-1">
+                  Profesionales (propuesta)
+                </p>
+                <ul className="text-[0.75rem] space-y-1 list-disc pl-4">
+                  <li>Umbral: <strong>≥200 chars/pág</strong> en primeras 5 págs</li>
+                  <li>Mode del wrapper: <code>pdfplumber_segmentation</code></li>
+                  <li>Detector: fuzzy RapidFuzz + qwen2.5:14b texto-only para borderline</li>
+                  <li>Fallback automático a motor-OCR si detecta &lt;2 secciones</li>
+                  <li>Ahorro típico: ~2-3 h → ~15 min</li>
+                </ul>
+              </div>
+              <div className="bg-white border border-fuchsia-200 rounded-lg p-3">
+                <p className="text-[0.6875rem] font-bold uppercase tracking-widest text-fuchsia-700 mb-1">
+                  TDR (bases)
+                </p>
+                <ul className="text-[0.75rem] space-y-1 list-disc pl-4">
+                  <li>Umbral: <strong>≥50 chars/pág</strong> (todas las págs)</li>
+                  <li>No usa mode del wrapper — pdfplumber <em>nativo</em> en <code>_run_tdr_job</code></li>
+                  <li>No requiere segmentación por profesional</li>
+                  <li>Fallback a motor-OCR (mode <code>ocr_only</code>) si texto insuficiente</li>
+                  <li>Las bases OSCE suelen ser digitales → fast-path casi siempre activo</li>
+                </ul>
+              </div>
+            </div>
+            <p className="text-[0.75rem] text-slate-600">
+              <strong>Forzar motor-OCR:</strong> checkbox que desactiva el fast-path (solo
+              aplica a Profesionales). Útil si el PDF es digital pero tiene sellos/tachaduras
+              que requieren análisis visual, o si el fast-path detectó menos profesionales de
+              los esperados.
+            </p>
+          </div>
+        </details>
 
         {/* ── Form superior ─────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -243,44 +310,77 @@ export default function DebugPdfplumberPage() {
             <h3 className="text-[0.75rem] font-bold uppercase tracking-wider text-primary mb-4">
               Subir PDF para debug
             </h3>
+
+            {/* Selector de tipo */}
+            <div className="flex gap-2 mb-4">
+              {([
+                { id: "extraction", label: "Profesionales", icon: "person_search" },
+                { id: "tdr", label: "TDR (bases)", icon: "fact_check" },
+              ] as { id: DebugJobType; label: string; icon: string }[]).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setJobType(opt.id)}
+                  className={
+                    "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all " +
+                    (jobType === opt.id
+                      ? "bg-fuchsia-600 text-white shadow-sm"
+                      : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high")
+                  }
+                >
+                  <span className="material-symbols-outlined text-base">{opt.icon}</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             <PdfDropzone
-              label="Propuesta"
-              hint="PDF escaneado o digital"
+              label={jobType === "tdr" ? "Bases del concurso" : "Propuesta técnica"}
+              hint={jobType === "tdr" ? "PDF digital (OSCE)" : "PDF escaneado o digital"}
               icon="bug_report"
               file={file}
               onFile={setFile}
             />
 
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <input
-                type="number"
-                min={1}
-                value={pagesFrom}
-                onChange={(e) => setPagesFrom(e.target.value)}
-                placeholder="pages_from"
-                className="bg-surface-container-low border-0 text-sm p-2 rounded-lg"
-              />
-              <input
-                type="number"
-                min={1}
-                value={pagesTo}
-                onChange={(e) => setPagesTo(e.target.value)}
-                placeholder="pages_to"
-                className="bg-surface-container-low border-0 text-sm p-2 rounded-lg"
-              />
-            </div>
+            {jobType === "extraction" && (
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <input
+                  type="number"
+                  min={1}
+                  value={pagesFrom}
+                  onChange={(e) => setPagesFrom(e.target.value)}
+                  placeholder="pages_from"
+                  className="bg-surface-container-low border-0 text-sm p-2 rounded-lg"
+                />
+                <input
+                  type="number"
+                  min={1}
+                  value={pagesTo}
+                  onChange={(e) => setPagesTo(e.target.value)}
+                  placeholder="pages_to"
+                  className="bg-surface-container-low border-0 text-sm p-2 rounded-lg"
+                />
+              </div>
+            )}
 
-            <label className="flex items-center gap-3 mt-4 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={forceMotorOcr}
-                onChange={(e) => setForceMotorOcr(e.target.checked)}
-                className="w-4 h-4 accent-primary"
-              />
-              <span className="text-sm text-on-surface">
-                Forzar motor-OCR (desactiva fast-path)
-              </span>
-            </label>
+            {jobType === "extraction" ? (
+              <label className="flex items-center gap-3 mt-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={forceMotorOcr}
+                  onChange={(e) => setForceMotorOcr(e.target.checked)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm text-on-surface">
+                  Forzar motor-OCR (desactiva fast-path)
+                </span>
+              </label>
+            ) : (
+              <p className="mt-4 text-[0.75rem] text-outline leading-relaxed">
+                <span className="material-symbols-outlined text-sm align-middle text-fuchsia-600 mr-1">info</span>
+                TDR intenta pdfplumber primero por diseño. Sólo cae a motor-OCR (mode <code>ocr_only</code>) si chars/pág &lt; 50 en todo el documento.
+              </p>
+            )}
 
             <button
               type="submit"
@@ -359,25 +459,53 @@ export default function DebugPdfplumberPage() {
 
               {/* Stats grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                <StatBadge label="Engine" value={engine} highlight={engine === "pdfplumber"} />
-                <StatBadge label="Total págs" value={String(result?.total_pages ?? "—")} />
-                <StatBadge label="pdfplumber" value={String(result?.pages_pdfplumber ?? 0)} />
-                <StatBadge label="PaddleOCR" value={String(result?.pages_paddle ?? 0)} />
-                <StatBadge label="Qwen-VL" value={String(result?.pages_qwen ?? 0)} />
                 <StatBadge
-                  label="Tiempo"
-                  value={result?.tiempo_total ? formatSeconds(result.tiempo_total) : "—"}
+                  label="Tipo"
+                  value={isTdr ? "TDR" : "Profesionales"}
+                  highlight={isTdr}
                 />
-                <StatBadge label="Secciones" value={String(result?.secciones?.length ?? 0)} />
-                <StatBadge label="Errores OCR" value={String(result?.pages_error ?? 0)} />
-                <StatBadge
-                  label="Confianza"
-                  value={
-                    result?.conf_promedio !== undefined
-                      ? `${(result.conf_promedio * 100).toFixed(0)}%`
-                      : "—"
-                  }
-                />
+                {isTdr ? (
+                  <>
+                    <StatBadge
+                      label="Cargos RTM"
+                      value={String(resultTdr?.total_cargos ?? 0)}
+                    />
+                    <StatBadge
+                      label="Factores"
+                      value={String(resultTdr?.total_factores ?? 0)}
+                    />
+                    <StatBadge
+                      label="RTM postor"
+                      value={String(resultTdr?.rtm_postor?.length ?? 0)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <StatBadge
+                      label="Engine"
+                      value={engine}
+                      highlight={engine === "pdfplumber"}
+                    />
+                    <StatBadge label="Total págs" value={String(resultExtraction?.total_pages ?? "—")} />
+                    <StatBadge label="pdfplumber" value={String(resultExtraction?.pages_pdfplumber ?? 0)} />
+                    <StatBadge label="PaddleOCR" value={String(resultExtraction?.pages_paddle ?? 0)} />
+                    <StatBadge label="Qwen-VL" value={String(resultExtraction?.pages_qwen ?? 0)} />
+                    <StatBadge
+                      label="Tiempo"
+                      value={resultExtraction?.tiempo_total ? formatSeconds(resultExtraction.tiempo_total) : "—"}
+                    />
+                    <StatBadge label="Secciones" value={String(resultExtraction?.secciones?.length ?? 0)} />
+                    <StatBadge label="Errores OCR" value={String(resultExtraction?.pages_error ?? 0)} />
+                    <StatBadge
+                      label="Confianza"
+                      value={
+                        resultExtraction?.conf_promedio !== undefined
+                          ? `${(resultExtraction.conf_promedio * 100).toFixed(0)}%`
+                          : "—"
+                      }
+                    />
+                  </>
+                )}
               </div>
             </div>
 
@@ -479,11 +607,11 @@ export default function DebugPdfplumberPage() {
               </div>
             )}
 
-            {/* ── Secciones detectadas ──────────────────────────── */}
-            {result?.secciones && result.secciones.length > 0 && (
+            {/* ── Secciones detectadas (Profesionales) ──────────── */}
+            {!isTdr && resultExtraction?.secciones && resultExtraction.secciones.length > 0 && (
               <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/10 shadow-ambient mb-6 overflow-x-auto">
                 <h3 className="text-[0.75rem] font-bold uppercase tracking-wider text-primary mb-3">
-                  Secciones detectadas ({result.secciones.length})
+                  Secciones detectadas ({resultExtraction.secciones.length})
                 </h3>
                 <table className="w-full text-left text-sm">
                   <thead className="bg-surface-container-high">
@@ -496,7 +624,7 @@ export default function DebugPdfplumberPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/10">
-                    {result.secciones.map((sec) => (
+                    {resultExtraction.secciones.map((sec) => (
                       <tr key={sec.index}>
                         <td className="px-3 py-2 font-mono">{sec.index}</td>
                         <td className="px-3 py-2 font-medium">{sec.cargo}</td>
@@ -520,12 +648,50 @@ export default function DebugPdfplumberPage() {
               </div>
             )}
 
+            {/* ── RTM Personal detectado (TDR) ──────────────────── */}
+            {isTdr && resultTdr?.rtm_personal && resultTdr.rtm_personal.length > 0 && (
+              <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/10 shadow-ambient mb-6 overflow-x-auto">
+                <h3 className="text-[0.75rem] font-bold uppercase tracking-wider text-primary mb-3">
+                  Cargos RTM detectados ({resultTdr.rtm_personal.length})
+                </h3>
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["#", "Cargo", "Años colegiado", "Exp. mínima", "Tipo obra", "Profesiones"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {resultTdr.rtm_personal.map((r, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 font-mono">{i + 1}</td>
+                        <td className="px-3 py-2 font-medium">{r.cargo}</td>
+                        <td className="px-3 py-2 font-mono text-[0.6875rem]">{r.anos_colegiado ?? "—"}</td>
+                        <td className="px-3 py-2 text-[0.6875rem]">
+                          {r.experiencia_minima
+                            ? `${r.experiencia_minima.cantidad ?? "—"} ${r.experiencia_minima.unidad ?? ""}`
+                            : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-[0.6875rem] text-outline">{r.tipo_obra_valido ?? "—"}</td>
+                        <td className="px-3 py-2 text-[0.6875rem] text-outline truncate max-w-[240px]">
+                          {r.profesiones_aceptadas?.join(", ") ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             {/* ── Raw JSON ─────────────────────────────────────────── */}
-            {result && (
+            {(resultExtraction || resultTdr) && (
               <div className="bg-slate-950 rounded-xl border border-slate-800 shadow-ambient mb-6 overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800">
                   <span className="text-[0.75rem] font-bold uppercase tracking-wider text-slate-300">
-                    Raw result JSON
+                    Raw result JSON {isTdr ? "(TDR)" : "(Profesionales)"}
                   </span>
                   <button
                     onClick={handleCopyJson}
@@ -536,7 +702,7 @@ export default function DebugPdfplumberPage() {
                   </button>
                 </div>
                 <pre className="max-h-[500px] overflow-auto font-mono text-[0.75rem] leading-relaxed p-4 bg-slate-950 text-emerald-300">
-                  {JSON.stringify(result, null, 2)}
+                  {JSON.stringify(resultExtraction ?? resultTdr, null, 2)}
                 </pre>
               </div>
             )}
