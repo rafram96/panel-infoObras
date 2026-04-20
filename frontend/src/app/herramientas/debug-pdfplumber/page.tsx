@@ -14,6 +14,26 @@ interface JobFile {
   modified_at: string;
 }
 
+interface LlmCallSummary {
+  filename: string;
+  timestamp: string;
+  block_type: string;
+  page_range: number[];
+  prompt_chars: number;
+  prompt_tokens_est: number;
+  num_ctx: number;
+  elapsed_s: number;
+  usage: { prompt_tokens?: number; completion_tokens?: number } | null;
+  parsed_ok: boolean;
+  items_extracted: number;
+  error: string | null;
+}
+
+interface LlmCallFull extends LlmCallSummary {
+  prompt: string;
+  raw_response: string;
+}
+
 type LogLevel = "info" | "decision" | "warn" | "error" | "stage";
 
 interface LogLine {
@@ -91,6 +111,12 @@ export default function DebugPdfplumberPage() {
   const [fileLoading, setFileLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // LLM calls dumps
+  const [llmCalls, setLlmCalls] = useState<LlmCallSummary[]>([]);
+  const [viewingCall, setViewingCall] = useState<LlmCallFull | null>(null);
+  const [callLoading, setCallLoading] = useState(false);
+  const [callTab, setCallTab] = useState<"prompt" | "response">("response");
+
   // Auto-scroll terminal
   const terminalRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -142,8 +168,34 @@ export default function DebugPdfplumberPage() {
         .then((r) => r.json())
         .then((data) => setFiles(data.files ?? []))
         .catch(() => setFiles([]));
+      // Fetch LLM calls dumps (cada llamada a Qwen 14B guardada por extraer_bloque)
+      fetch(`/api/jobs/${jobId}/llm-calls`)
+        .then((r) => r.json())
+        .then((data) => setLlmCalls(data.calls ?? []))
+        .catch(() => setLlmCalls([]));
     }
   }, [detail?.status, jobId, isDone, isActive]);
+
+  const handleViewCall = async (filename: string) => {
+    if (!jobId) return;
+    setCallLoading(true);
+    setViewingCall(null);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/llm-calls/${filename}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: LlmCallFull = await res.json();
+      setViewingCall(data);
+      setCallTab("response");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error cargando llamada LLM");
+    } finally {
+      setCallLoading(false);
+    }
+  };
+
+  const handleCopyText = (txt: string) => {
+    navigator.clipboard.writeText(txt).catch(() => { /* ignore */ });
+  };
 
   // Auto-scroll terminal
   useEffect(() => {
@@ -794,6 +846,145 @@ export default function DebugPdfplumberPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* ── Llamadas LLM (Qwen 14B) ─────────────────────────── */}
+            {llmCalls.length > 0 && (
+              <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/10 shadow-ambient mb-6">
+                <h3 className="text-[0.75rem] font-bold uppercase tracking-wider text-primary mb-3">
+                  Llamadas LLM Qwen 14B ({llmCalls.length})
+                </h3>
+                <p className="text-[0.75rem] text-outline mb-3">
+                  Cada llamada incluye el prompt enviado, la respuesta cruda, tokens usados y num_ctx. Clickea una fila para ver el contenido completo.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-surface-container-high">
+                      <tr>
+                        {["#", "Bloque", "Páginas", "Chars/Tokens", "num_ctx", "Tiempo", "Tokens in/out", "Items", "OK"].map((h) => (
+                          <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/10">
+                      {llmCalls.map((c, i) => {
+                        const truncated =
+                          c.usage?.prompt_tokens && c.num_ctx
+                            ? c.usage.prompt_tokens >= c.num_ctx - 100
+                            : false;
+                        const selected = viewingCall?.filename === c.filename;
+                        return (
+                          <tr
+                            key={c.filename}
+                            onClick={() => handleViewCall(c.filename)}
+                            className={
+                              "cursor-pointer transition-colors " +
+                              (selected
+                                ? "bg-fuchsia-50 border-l-4 border-fuchsia-500"
+                                : "hover:bg-surface-container-high/40") +
+                              (truncated ? " border-l-4 border-amber-500" : "")
+                            }
+                            title={truncated ? "Posible truncamiento: prompt_tokens cerca de num_ctx" : c.error || undefined}
+                          >
+                            <td className="px-3 py-2 font-mono text-xs">{i + 1}</td>
+                            <td className="px-3 py-2 text-xs font-medium">{c.block_type}</td>
+                            <td className="px-3 py-2 font-mono text-xs">
+                              {c.page_range?.[0]}–{c.page_range?.[1]}
+                            </td>
+                            <td className="px-3 py-2 font-mono text-[0.6875rem]">
+                              {c.prompt_chars.toLocaleString()}ch / ~{c.prompt_tokens_est?.toLocaleString()}tk
+                            </td>
+                            <td className="px-3 py-2 font-mono text-[0.6875rem]">{c.num_ctx.toLocaleString()}</td>
+                            <td className="px-3 py-2 font-mono text-[0.6875rem]">{c.elapsed_s?.toFixed(1)}s</td>
+                            <td className="px-3 py-2 font-mono text-[0.6875rem]">
+                              {c.usage?.prompt_tokens ?? "—"} / {c.usage?.completion_tokens ?? "—"}
+                              {truncated && (
+                                <span className="ml-1 text-amber-700 font-bold" title="Cerca del límite">⚠</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={"font-bold " + (c.items_extracted > 0 ? "text-emerald-700" : "text-slate-400")}>
+                                {c.items_extracted}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2">
+                              {c.parsed_ok ? (
+                                <span className="material-symbols-outlined text-emerald-600 text-base">check_circle</span>
+                              ) : (
+                                <span className="material-symbols-outlined text-red-600 text-base">error</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ── Viewer de una llamada LLM ──────────────────────── */}
+            {viewingCall && (
+              <div className="bg-slate-950 rounded-xl border border-slate-800 shadow-ambient mb-6 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 gap-3 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <code className="text-[0.75rem] text-fuchsia-300 font-mono">
+                      {viewingCall.block_type} · págs {viewingCall.page_range[0]}–{viewingCall.page_range[1]}
+                    </code>
+                    <div className="text-[0.625rem] text-slate-500 font-mono mt-0.5">
+                      {viewingCall.prompt_chars.toLocaleString()} chars prompt · num_ctx={viewingCall.num_ctx} ·
+                      tokens in={viewingCall.usage?.prompt_tokens} out={viewingCall.usage?.completion_tokens} · {viewingCall.elapsed_s?.toFixed(1)}s
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => setCallTab("prompt")}
+                      className={
+                        "text-xs px-2 py-1 rounded " +
+                        (callTab === "prompt"
+                          ? "bg-fuchsia-600 text-white"
+                          : "text-slate-400 hover:text-white")
+                      }
+                    >
+                      Prompt
+                    </button>
+                    <button
+                      onClick={() => setCallTab("response")}
+                      className={
+                        "text-xs px-2 py-1 rounded " +
+                        (callTab === "response"
+                          ? "bg-fuchsia-600 text-white"
+                          : "text-slate-400 hover:text-white")
+                      }
+                    >
+                      Respuesta
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleCopyText(callTab === "prompt" ? viewingCall.prompt : viewingCall.raw_response)
+                      }
+                      className="text-xs text-slate-300 hover:text-fuchsia-300 flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-sm">content_copy</span>
+                      Copiar
+                    </button>
+                    <button
+                      onClick={() => setViewingCall(null)}
+                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+                <pre className="h-[500px] overflow-auto font-mono text-[0.75rem] leading-relaxed p-4 bg-slate-950 text-slate-200 whitespace-pre-wrap break-all">
+                  {callLoading
+                    ? "Cargando…"
+                    : callTab === "prompt"
+                    ? viewingCall.prompt
+                    : viewingCall.raw_response}
+                </pre>
               </div>
             )}
 
