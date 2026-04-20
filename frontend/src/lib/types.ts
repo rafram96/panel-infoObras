@@ -11,6 +11,8 @@ export interface Job {
   created_at: string;
   progress_pct: number;
   profesionales_count: number | null;
+  source_job_id?: string | null;
+  pdf_available?: boolean;
 }
 
 export interface Bloque {
@@ -118,4 +120,5 @@ export interface JobDetail extends Job {
   progress_stage: string | null;
   doc_total_pages: number | null;
   logs: string | null;
+  bases_available?: boolean;
 }

@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import PanelShell from "@/components/PanelShell";
 import type { Job, JobDetail, Seccion, ExtractionResult, TdrResult, RequisitoPersonal } from "@/lib/types";
@@ -28,6 +29,7 @@ export default function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
 
   const [detail, setDetail] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,6 +46,10 @@ export default function JobDetailPage({
   const [evaluating, setEvaluating] = useState(false);
   const [evalError, setEvalError] = useState<string | null>(null);
   const [excelExists, setExcelExists] = useState(false);
+  const [rerunOpen, setRerunOpen] = useState(false);
+  const [rerunForceMotorOcr, setRerunForceMotorOcr] = useState(false);
+  const [rerunSubmitting, setRerunSubmitting] = useState(false);
+  const [rerunError, setRerunError] = useState<string | null>(null);
 
   // ── Fetch detail ────────────────────────────────────────────────────────
   const fetchDetail = useCallback(async () => {
@@ -254,6 +260,28 @@ export default function JobDetailPage({
   const isError = detail.status === "error";
   const currentStage = stageIndex(detail.progress_stage);
 
+  const handleRerun = async () => {
+    setRerunSubmitting(true);
+    setRerunError(null);
+    try {
+      const fd = new FormData();
+      if (rerunForceMotorOcr) fd.append("force_motor_ocr", "true");
+      const res = await fetch(`/api/jobs/${id}/rerun`, { method: "POST", body: fd });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail ?? `HTTP ${res.status}`);
+      }
+      const { id: newId } = await res.json();
+      setRerunOpen(false);
+      setRerunForceMotorOcr(false);
+      router.push(`/jobs/${newId}`);
+    } catch (err) {
+      setRerunError(err instanceof Error ? err.message : "Error al re-correr");
+    } finally {
+      setRerunSubmitting(false);
+    }
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <PanelShell
@@ -272,6 +300,23 @@ export default function JobDetailPage({
           Expediente #{id.slice(0, 8)}
         </span>
       </nav>
+
+      {/* ── Banner: este job es re-run ─────────────────────────────────── */}
+      {detail.source_job_id && (
+        <div className="flex items-center gap-2 mb-4 px-4 py-2.5 bg-fuchsia-50 border border-fuchsia-200 rounded-lg">
+          <span className="material-symbols-outlined text-fuchsia-600 text-sm">replay</span>
+          <p className="text-[0.75rem] text-fuchsia-800 font-medium">
+            Re-run del job{" "}
+            <Link
+              href={`/jobs/${detail.source_job_id}`}
+              className="font-mono font-bold underline hover:text-fuchsia-900"
+            >
+              {detail.source_job_id}
+            </Link>
+            . El PDF original se copió de ahí.
+          </p>
+        </div>
+      )}
 
       {/* ── Header row ───────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -311,6 +356,21 @@ export default function JobDetailPage({
               </button>
             )}
           </>
+        )}
+
+        {/* Re-correr — disponible si PDF preservado e ya termino (done/error) */}
+        {(isDone || isError) && detail.pdf_available && (
+          <button
+            onClick={() => {
+              setRerunOpen(true);
+              setRerunError(null);
+              setRerunForceMotorOcr(false);
+            }}
+            className="inline-flex items-center gap-1.5 bg-fuchsia-50 text-fuchsia-700 text-xs font-semibold px-4 py-2 rounded-lg border border-fuchsia-200 transition-colors hover:bg-fuchsia-100"
+          >
+            <span className="material-symbols-outlined text-base">restart_alt</span>
+            Re-correr
+          </button>
         )}
       </div>
 
@@ -779,6 +839,69 @@ export default function JobDetailPage({
                 className="px-5 py-2 text-sm font-extrabold uppercase tracking-wider rounded-lg primary-gradient text-white disabled:opacity-50 disabled:pointer-events-none"
               >
                 {evaluating ? "Evaluando..." : "Generar Excel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Rerun modal ────────────────────────────────────────────────── */}
+      {rerunOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+            <div className="px-5 py-4 border-b border-outline-variant/20">
+              <h3 className="text-base font-bold text-primary">Re-correr análisis</h3>
+              <p className="text-[0.75rem] text-outline mt-1">
+                Se clonará este job y se procesará el mismo PDF con el pipeline actual.
+              </p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-surface-container-low rounded-lg p-3">
+                <p className="text-[0.6875rem] uppercase tracking-widest text-outline">Job original</p>
+                <p className="font-mono text-sm font-bold text-primary mt-1">{id}</p>
+                <p className="text-xs text-on-surface-variant">{detail.filename}</p>
+              </div>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rerunForceMotorOcr}
+                  onChange={(e) => setRerunForceMotorOcr(e.target.checked)}
+                  className="w-4 h-4 accent-fuchsia-600"
+                />
+                <span className="text-sm text-on-surface">
+                  Forzar motor-OCR (desactivar fast-path pdfplumber)
+                </span>
+              </label>
+
+              <div className="bg-secondary-container/20 border border-secondary-container/30 rounded-lg p-3">
+                <p className="text-[0.75rem] leading-relaxed text-on-secondary-container">
+                  El nuevo job usará el pipeline actual — incluye el fast-path pdfplumber
+                  si el PDF es digital y chars/pág ≥ 200. Marca la casilla si quieres forzar el
+                  procesamiento OCR completo.
+                </p>
+              </div>
+
+              {rerunError && (
+                <div className="bg-error-container/30 border border-error/20 rounded-lg p-3 text-[0.75rem] text-error font-medium">
+                  ⚠ {rerunError}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-3 px-5 py-3 bg-surface-container-low border-t border-outline-variant/20">
+              <button
+                onClick={() => setRerunOpen(false)}
+                disabled={rerunSubmitting}
+                className="px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-high rounded-lg transition-colors disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRerun}
+                disabled={rerunSubmitting}
+                className="px-5 py-2 bg-fuchsia-600 text-white text-sm font-bold rounded-lg hover:bg-fuchsia-700 transition-colors disabled:opacity-40"
+              >
+                {rerunSubmitting ? "Enviando…" : "Re-correr"}
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import PanelShell from "@/components/PanelShell";
 import ConfirmModal from "@/components/ConfirmModal";
 import type { Job, JobStatus, JobType } from "@/lib/types";
@@ -28,11 +29,44 @@ const TYPE_OPTIONS: { value: FilterType; label: string }[] = [
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
+  const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  // ── Rerun modal ────────────────────────────────────────────────────────
+  const [rerunTarget, setRerunTarget] = useState<Job | null>(null);
+  const [rerunForceMotorOcr, setRerunForceMotorOcr] = useState(false);
+  const [rerunSubmitting, setRerunSubmitting] = useState(false);
+  const [rerunError, setRerunError] = useState<string | null>(null);
+
+  const handleRerun = async () => {
+    if (!rerunTarget) return;
+    setRerunSubmitting(true);
+    setRerunError(null);
+    try {
+      const fd = new FormData();
+      if (rerunForceMotorOcr) fd.append("force_motor_ocr", "true");
+      const res = await fetch(`/api/jobs/${rerunTarget.id}/rerun`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail ?? `HTTP ${res.status}`);
+      }
+      const { id } = await res.json();
+      setRerunTarget(null);
+      setRerunForceMotorOcr(false);
+      router.push(`/jobs/${id}`);
+    } catch (err) {
+      setRerunError(err instanceof Error ? err.message : "Error al re-correr");
+    } finally {
+      setRerunSubmitting(false);
+    }
+  };
 
   // ── Fetch + poll ─────────────────────────────────────────────────────────
   const fetchJobs = useCallback(async () => {
@@ -276,13 +310,47 @@ export default function HistorialPage() {
 
                   {/* Acciones */}
                   <td className="px-4 py-4 text-right space-x-2">
+                    {job.source_job_id && (
+                      <Link
+                        href={`/jobs/${job.source_job_id}`}
+                        title={`Re-run de ${job.source_job_id} — ver original`}
+                      >
+                        <span className="material-symbols-outlined text-fuchsia-600 text-lg hover:opacity-70 cursor-pointer align-middle">
+                          replay
+                        </span>
+                      </Link>
+                    )}
                     <Link href={`/jobs/${job.id}`}>
-                      <span className="material-symbols-outlined text-primary text-lg hover:opacity-70 cursor-pointer">
+                      <span className="material-symbols-outlined text-primary text-lg hover:opacity-70 cursor-pointer align-middle">
                         visibility
                       </span>
                     </Link>
+                    <button
+                      onClick={() => {
+                        setRerunTarget(job);
+                        setRerunError(null);
+                        setRerunForceMotorOcr(false);
+                      }}
+                      disabled={!job.pdf_available}
+                      title={
+                        job.pdf_available
+                          ? "Re-correr pipeline sobre el mismo PDF"
+                          : "PDF no disponible — no se puede re-correr"
+                      }
+                    >
+                      <span
+                        className={
+                          "material-symbols-outlined text-lg align-middle " +
+                          (job.pdf_available
+                            ? "text-fuchsia-600 hover:opacity-70 cursor-pointer"
+                            : "text-slate-300 cursor-not-allowed")
+                        }
+                      >
+                        restart_alt
+                      </span>
+                    </button>
                     <button onClick={() => setDeleteTarget(job.id)}>
-                      <span className="material-symbols-outlined text-error text-lg hover:opacity-70">
+                      <span className="material-symbols-outlined text-error text-lg hover:opacity-70 align-middle">
                         delete
                       </span>
                     </button>
@@ -330,6 +398,69 @@ export default function HistorialPage() {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {/* ── Rerun modal ────────────────────────────────────────────────── */}
+      {rerunTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+            <div className="px-5 py-4 border-b border-outline-variant/20">
+              <h3 className="text-base font-bold text-primary">Re-correr análisis</h3>
+              <p className="text-[0.75rem] text-outline mt-1">
+                Se clonará este job y se procesará el mismo PDF con el pipeline actual.
+              </p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-surface-container-low rounded-lg p-3">
+                <p className="text-[0.6875rem] uppercase tracking-widest text-outline">Job original</p>
+                <p className="font-mono text-sm font-bold text-primary mt-1">{rerunTarget.id}</p>
+                <p className="text-xs text-on-surface-variant">{rerunTarget.filename}</p>
+              </div>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rerunForceMotorOcr}
+                  onChange={(e) => setRerunForceMotorOcr(e.target.checked)}
+                  className="w-4 h-4 accent-fuchsia-600"
+                />
+                <span className="text-sm text-on-surface">
+                  Forzar motor-OCR (desactivar fast-path pdfplumber)
+                </span>
+              </label>
+
+              <div className="bg-secondary-container/20 border border-secondary-container/30 rounded-lg p-3">
+                <p className="text-[0.75rem] leading-relaxed text-on-secondary-container">
+                  El nuevo job usará el pipeline actual — incluye el fast-path pdfplumber
+                  si el PDF es digital y chars/pág ≥ 200. Marca la casilla si quieres forzar el
+                  procesamiento OCR completo.
+                </p>
+              </div>
+
+              {rerunError && (
+                <div className="bg-error-container/30 border border-error/20 rounded-lg p-3 text-[0.75rem] text-error font-medium">
+                  ⚠ {rerunError}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-3 px-5 py-3 bg-surface-container-low border-t border-outline-variant/20">
+              <button
+                onClick={() => setRerunTarget(null)}
+                disabled={rerunSubmitting}
+                className="px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-high rounded-lg transition-colors disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRerun}
+                disabled={rerunSubmitting}
+                className="px-5 py-2 bg-fuchsia-600 text-white text-sm font-bold rounded-lg hover:bg-fuchsia-700 transition-colors disabled:opacity-40"
+              >
+                {rerunSubmitting ? "Enviando…" : "Re-correr"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PanelShell>
   );
 }
