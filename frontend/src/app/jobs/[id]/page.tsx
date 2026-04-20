@@ -701,10 +701,12 @@ export default function JobDetailPage({
                     </thead>
                     <tbody className="divide-y divide-outline-variant/10">
                       {r.factores_evaluacion.map((f, i) => (
-                        <tr key={i} className="hover:bg-surface-container-high/40 transition-colors">
-                          <td className="px-3 py-2 text-xs text-secondary font-mono">{i + 1}</td>
-                          <td className="px-3 py-2 text-sm text-primary font-medium max-w-[250px]">{f.factor}</td>
-                          <td className="px-3 py-2">
+                        <tr key={i} className="hover:bg-surface-container-high/40 transition-colors align-top">
+                          <td className="px-3 py-3 text-xs text-secondary font-mono whitespace-nowrap">{i + 1}</td>
+                          <td className="px-3 py-3 text-sm text-primary font-medium max-w-[280px] whitespace-normal break-words leading-snug">
+                            {f.factor}
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
                             <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                               f.aplica_a === "personal" ? "bg-blue-100 text-blue-700"
                               : f.aplica_a === "postor" ? "bg-amber-100 text-amber-700"
@@ -713,9 +715,13 @@ export default function JobDetailPage({
                               {f.aplica_a}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-xs text-secondary">{f.cargo_personal || "\u2014"}</td>
-                          <td className="px-3 py-2 text-sm font-bold text-primary">{f.puntaje_maximo}</td>
-                          <td className="px-3 py-2 text-xs text-secondary max-w-[200px] truncate">{f.metodologia || "\u2014"}</td>
+                          <td className="px-3 py-3 text-xs text-secondary max-w-[180px] whitespace-normal break-words leading-snug">
+                            {f.cargo_personal || "\u2014"}
+                          </td>
+                          <td className="px-3 py-3 text-sm font-bold text-primary whitespace-nowrap text-center">{f.puntaje_maximo}</td>
+                          <td className="px-3 py-3 text-xs text-secondary max-w-[420px] whitespace-normal break-words leading-snug">
+                            {f.metodologia || "\u2014"}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -989,15 +995,15 @@ function TdrRequisitoRow({
   return (
     <tr
       className={
-        "transition-colors " +
+        "transition-colors align-top " +
         (needsReview
           ? "bg-red-50/60 hover:bg-red-50 border-l-4 border-red-500"
           : "hover:bg-surface-container-high/40")
       }
     >
-      <td className="px-3 py-2 text-xs text-secondary font-mono">{index + 1}</td>
-      <td className="px-3 py-2 text-sm font-medium">
-        <div className="flex items-center gap-2">
+      <td className="px-3 py-3 text-xs text-secondary font-mono whitespace-nowrap">{index + 1}</td>
+      <td className="px-3 py-3 text-sm font-medium max-w-[260px]">
+        <div className="flex items-start gap-2">
           {needsReview && (
             <span
               className="material-symbols-outlined text-red-600 text-base shrink-0"
@@ -1006,24 +1012,31 @@ function TdrRequisitoRow({
               warning
             </span>
           )}
-          <span className={needsReview ? "text-red-700" : "text-primary"}>
+          <span
+            className={
+              "whitespace-normal break-words leading-snug " +
+              (needsReview ? "text-red-700" : "text-primary")
+            }
+          >
             {req.cargo}
           </span>
         </div>
         {needsReview && (
-          <p className="text-[0.6875rem] text-red-600 mt-1 leading-tight">
+          <p className="text-[0.6875rem] text-red-600 mt-1 leading-snug whitespace-normal break-words">
             {reviewReason}
           </p>
         )}
       </td>
-      <td className="px-3 py-2 text-xs text-secondary">
+      <td className="px-3 py-3 text-xs text-secondary max-w-[240px] whitespace-normal break-words leading-snug">
         {req.profesiones_aceptadas?.join(", ") || "\u2014"}
       </td>
-      <td className="px-3 py-2 text-xs text-secondary max-w-[200px]">{expLabel}</td>
-      <td className="px-3 py-2 text-xs text-secondary max-w-[150px] truncate">
+      <td className="px-3 py-3 text-xs text-secondary max-w-[320px] whitespace-normal break-words leading-snug">
+        {expLabel}
+      </td>
+      <td className="px-3 py-3 text-xs text-secondary max-w-[180px] whitespace-normal break-words leading-snug">
         {req.tipo_obra_valido || "\u2014"}
       </td>
-      <td className="px-3 py-2 text-xs text-secondary max-w-[200px]">
+      <td className="px-3 py-3 text-xs text-secondary max-w-[320px] whitespace-normal break-words leading-snug">
         {expMin?.cargos_similares_validos?.join(", ") || "\u2014"}
       </td>
     </tr>
