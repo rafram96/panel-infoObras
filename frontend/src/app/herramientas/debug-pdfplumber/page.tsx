@@ -217,6 +217,30 @@ export default function DebugPdfplumberPage() {
     navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
   };
 
+  const [fileCopied, setFileCopied] = useState(false);
+
+  const handleCopyFile = async () => {
+    if (!fileContent) return;
+    try {
+      await navigator.clipboard.writeText(fileContent);
+      setFileCopied(true);
+      setTimeout(() => setFileCopied(false), 2000);
+    } catch {
+      /* ignore clipboard errors */
+    }
+  };
+
+  const handleDownloadFile = () => {
+    if (!viewingFile || !fileContent) return;
+    const blob = new Blob([fileContent], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = viewingFile.split(/[\\/]/).pop() || "archivo.md";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleDownloadLogs = async () => {
     if (!jobId) return;
     // Preferir el archivo dedicado (logs completos incluyendo librerias).
@@ -549,6 +573,16 @@ export default function DebugPdfplumberPage() {
                     Auto-scroll
                   </label>
                   <button
+                    onClick={() => {
+                      if (detail.logs) navigator.clipboard.writeText(detail.logs);
+                    }}
+                    disabled={!detail.logs}
+                    className="text-xs text-slate-300 hover:text-fuchsia-300 disabled:opacity-40 flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-sm">content_copy</span>
+                    Copiar
+                  </button>
+                  <button
                     onClick={handleDownloadLogs}
                     disabled={!detail.logs}
                     className="text-xs text-slate-300 hover:text-fuchsia-300 disabled:opacity-40 flex items-center gap-1"
@@ -612,14 +646,43 @@ export default function DebugPdfplumberPage() {
             {/* ── Viewer de archivo ──────────────────────────────── */}
             {viewingFile && (
               <div className="bg-slate-950 rounded-xl border border-slate-800 shadow-ambient mb-6 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800">
-                  <code className="text-[0.75rem] text-fuchsia-300 font-mono">{viewingFile}</code>
-                  <button
-                    onClick={() => setViewingFile(null)}
-                    className="text-xs text-slate-400 hover:text-white"
-                  >
-                    ✕ cerrar
-                  </button>
+                <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 gap-3 flex-wrap">
+                  <code className="text-[0.75rem] text-fuchsia-300 font-mono truncate flex-1 min-w-0">
+                    {viewingFile}
+                  </code>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-[0.6875rem] text-slate-500 font-mono">
+                      {fileContent ? `${fileContent.length.toLocaleString()} chars` : ""}
+                    </span>
+                    <button
+                      onClick={handleCopyFile}
+                      disabled={!fileContent || fileLoading}
+                      className={
+                        "text-xs flex items-center gap-1 transition-colors disabled:opacity-40 " +
+                        (fileCopied ? "text-emerald-300" : "text-slate-300 hover:text-fuchsia-300")
+                      }
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        {fileCopied ? "check" : "content_copy"}
+                      </span>
+                      {fileCopied ? "Copiado" : "Copiar todo"}
+                    </button>
+                    <button
+                      onClick={handleDownloadFile}
+                      disabled={!fileContent || fileLoading}
+                      className="text-xs text-slate-300 hover:text-fuchsia-300 flex items-center gap-1 disabled:opacity-40"
+                    >
+                      <span className="material-symbols-outlined text-sm">download</span>
+                      Descargar
+                    </button>
+                    <button
+                      onClick={() => setViewingFile(null)}
+                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                      Cerrar
+                    </button>
+                  </div>
                 </div>
                 <pre className="h-[500px] overflow-auto font-mono text-[0.75rem] leading-relaxed p-4 bg-slate-950 text-slate-200 whitespace-pre-wrap break-all">
                   {fileLoading ? "Cargando…" : fileContent}
