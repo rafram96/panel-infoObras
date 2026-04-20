@@ -137,6 +137,16 @@ export default function DebugPdfplumberPage() {
   const isDone = detail?.status === "done";
   const engine = (resultExtraction?.engine as string | undefined) ?? "—";
 
+  // Reset explicito al cambiar de jobId (evita ver dumps/archivos del job anterior)
+  useEffect(() => {
+    setDetail(null);
+    setFiles([]);
+    setLlmCalls([]);
+    setViewingCall(null);
+    setViewingFile(null);
+    setFileContent("");
+  }, [jobId]);
+
   // Poll job detail
   useEffect(() => {
     if (!jobId) return;
@@ -161,22 +171,43 @@ export default function DebugPdfplumberPage() {
     };
   }, [jobId]);
 
-  // Stop polling once done
+  // Fetch files + llm-calls cada 3s mientras el job corre, y una vez al terminar.
+  // Asi las llamadas aparecen en vivo (no solo al final).
   useEffect(() => {
-    if (!detail || isActive) return;
-    // Fetch files cuando el job termine
-    if (jobId && isDone) {
-      fetch(`/api/jobs/${jobId}/files`)
-        .then((r) => r.json())
-        .then((data) => setFiles(data.files ?? []))
-        .catch(() => setFiles([]));
-      // Fetch LLM calls dumps (cada llamada a Qwen 14B guardada por extraer_bloque)
-      fetch(`/api/jobs/${jobId}/llm-calls`)
-        .then((r) => r.json())
-        .then((data) => setLlmCalls(data.calls ?? []))
-        .catch(() => setLlmCalls([]));
+    if (!jobId || !detail) return;
+    let cancelled = false;
+
+    const fetchArtifacts = async () => {
+      try {
+        const [filesRes, callsRes] = await Promise.all([
+          fetch(`/api/jobs/${jobId}/files`),
+          fetch(`/api/jobs/${jobId}/llm-calls`),
+        ]);
+        if (filesRes.ok) {
+          const data = await filesRes.json();
+          if (!cancelled) setFiles(data.files ?? []);
+        }
+        if (callsRes.ok) {
+          const data = await callsRes.json();
+          if (!cancelled) setLlmCalls(data.calls ?? []);
+        }
+      } catch {
+        /* silent */
+      }
+    };
+
+    fetchArtifacts();
+
+    // Si aun corre, polling cada 3s. Si termino, un fetch final y stop.
+    if (isActive) {
+      const int = setInterval(fetchArtifacts, 3000);
+      return () => {
+        cancelled = true;
+        clearInterval(int);
+      };
     }
-  }, [detail?.status, jobId, isDone, isActive]);
+    return () => { cancelled = true; };
+  }, [jobId, detail?.status, isActive]);
 
   const handleViewCall = async (filename: string) => {
     if (!jobId) return;
