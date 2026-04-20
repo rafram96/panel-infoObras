@@ -22,6 +22,8 @@ interface LlmCallSummary {
   prompt_chars: number;
   prompt_tokens_est: number;
   num_ctx: number;
+  model_solicitado?: string | null;
+  model_respondido?: string | null;
   elapsed_s: number;
   usage: { prompt_tokens?: number; completion_tokens?: number } | null;
   parsed_ok: boolean;
@@ -858,6 +860,16 @@ export default function DebugPdfplumberPage() {
                 <p className="text-[0.75rem] text-outline mb-3">
                   Cada llamada incluye el prompt enviado, la respuesta cruda, tokens usados y num_ctx. Clickea una fila para ver el contenido completo.
                 </p>
+                {llmCalls[0]?.model_solicitado && (
+                  <p className="text-[0.75rem] text-outline mb-2 font-mono">
+                    Modelo solicitado: <span className="font-bold text-primary">{llmCalls[0].model_solicitado}</span>
+                    {llmCalls[0].model_respondido && llmCalls[0].model_respondido !== llmCalls[0].model_solicitado && (
+                      <span className="ml-2 text-amber-700">
+                        · respondido: <span className="font-bold">{llmCalls[0].model_respondido}</span>
+                      </span>
+                    )}
+                  </p>
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-surface-container-high">
