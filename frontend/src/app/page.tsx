@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import PanelShell from "@/components/PanelShell";
 import type { Job } from "@/lib/types";
-import { STATUS_LABEL, STATUS_BADGE } from "@/lib/helpers";
+import { STATUS_LABEL, STATUS_BADGE, formatFechaHumano } from "@/lib/helpers";
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
@@ -123,12 +123,11 @@ export default function Dashboard() {
                     <td className="px-5 py-3 text-sm text-primary truncate max-w-[200px]">
                       {job.filename}
                     </td>
-                    <td className="px-5 py-3 text-xs text-outline whitespace-nowrap">
-                      {new Date(job.created_at).toLocaleDateString("es-PE", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                    <td
+                      className="px-5 py-3 text-xs text-outline whitespace-nowrap"
+                      title={job.created_at}
+                    >
+                      {formatFechaHumano(job.created_at)}
                     </td>
                     <td className="px-5 py-3">
                       <span

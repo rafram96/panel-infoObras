@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import PanelShell from "@/components/PanelShell";
 import ConfirmModal from "@/components/ConfirmModal";
 import type { Job, JobStatus, JobType } from "@/lib/types";
-import { STATUS_LABEL, STATUS_BADGE, JOB_TYPE_LABEL, JOB_TYPE_BADGE, JOB_TYPE_ICON } from "@/lib/helpers";
+import { STATUS_LABEL, STATUS_BADGE, JOB_TYPE_LABEL, JOB_TYPE_BADGE, JOB_TYPE_ICON, formatFechaHumano } from "@/lib/helpers";
 
 // ── Filter options ───────────────────────────────────────────────────────────
 type FilterStatus = "all" | JobStatus;
@@ -235,8 +235,11 @@ export default function HistorialPage() {
                   ].join(" ")}
                 >
                   {/* Fecha */}
-                  <td className="px-4 py-4 text-xs text-on-surface font-medium whitespace-nowrap">
-                    {job.created_at}
+                  <td
+                    className="px-4 py-4 text-xs text-on-surface font-medium whitespace-nowrap"
+                    title={job.created_at}
+                  >
+                    {formatFechaHumano(job.created_at)}
                   </td>
 
                   {/* Archivo */}

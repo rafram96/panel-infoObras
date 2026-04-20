@@ -49,6 +49,45 @@ export function formatSeconds(s: number): string {
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
+const MESES_ES = [
+  "ene", "feb", "mar", "abr", "may", "jun",
+  "jul", "ago", "sep", "oct", "nov", "dic",
+];
+
+/**
+ * Formato humano para fechas ISO:
+ * - Hoy, 15:42
+ * - Ayer, 09:17
+ * - 19 abr, 15:42   (este año)
+ * - 19 abr 2025, 15:42 (otro año)
+ */
+export function formatFechaHumano(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+
+  const now = new Date();
+  const hoy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const ayer = new Date(hoy);
+  ayer.setDate(hoy.getDate() - 1);
+  const fecha = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const hora = `${hh}:${mm}`;
+
+  if (fecha.getTime() === hoy.getTime()) return `Hoy, ${hora}`;
+  if (fecha.getTime() === ayer.getTime()) return `Ayer, ${hora}`;
+
+  const dia = d.getDate();
+  const mes = MESES_ES[d.getMonth()];
+  const anio = d.getFullYear();
+  const mostrarAnio = anio !== now.getFullYear();
+  return mostrarAnio
+    ? `${dia} ${mes} ${anio}, ${hora}`
+    : `${dia} ${mes}, ${hora}`;
+}
+
 export function compressPages(pages: number[]): string {
   if (!pages.length) return "—";
   const sorted = [...pages].sort((a, b) => a - b);

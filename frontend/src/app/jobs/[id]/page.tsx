@@ -13,6 +13,7 @@ import {
   formatSeconds,
   compressPages,
   bloqueLabel,
+  formatFechaHumano,
 } from "@/lib/helpers";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -785,7 +786,7 @@ export default function JobDetailPage({
                           {j.filename}
                         </div>
                         <div className="text-xs text-on-surface-variant">
-                          {j.profesionales_count ? `${j.profesionales_count} cargos` : "—"} · {j.created_at?.slice(0, 10)}
+                          {j.profesionales_count ? `${j.profesionales_count} cargos` : "—"} · {formatFechaHumano(j.created_at)}
                         </div>
                       </div>
                     </label>
