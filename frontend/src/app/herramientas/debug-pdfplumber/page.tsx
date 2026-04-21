@@ -836,9 +836,23 @@ export default function DebugPdfplumberPage() {
                 <table className="w-full text-left text-sm">
                   <thead className="bg-surface-container-high">
                     <tr>
-                      {["#", "Cargo", "Años colegiado", "Exp. mínima", "Tipo obra", "Profesiones"].map((h) => (
-                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                          {h}
+                      {([
+                        { label: "#", hint: "Número de fila en el TDR" },
+                        { label: "Cargo", hint: "Puesto requerido (columna 'Cargo y/o Responsabilidad' de B.1)" },
+                        { label: "Años colegiado", hint: "Tiempo mínimo de colegiatura exigido (si el TDR lo especifica)" },
+                        { label: "Exp. mín.", hint: "Meses mínimos de experiencia laboral requeridos (columna 'Tiempo' de B.2)" },
+                        { label: "Especialidad", hint: "Tipo/sector de obra válido para acreditar (ej: establecimientos de salud)" },
+                        { label: "Títulos (B.1)", hint: "Profesiones aceptadas — títulos universitarios válidos (columna 'Formación Académica' de B.1). NO son puestos de trabajo." },
+                      ] as { label: string; hint: string }[]).map((col) => (
+                        <th
+                          key={col.label}
+                          title={col.hint}
+                          className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 cursor-help"
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {col.label}
+                            <span className="material-symbols-outlined text-[11px] text-slate-400">info</span>
+                          </span>
                         </th>
                       ))}
                     </tr>

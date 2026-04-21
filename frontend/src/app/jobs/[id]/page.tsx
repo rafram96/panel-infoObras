@@ -663,12 +663,47 @@ export default function JobDetailPage({
                   );
                 })()}
 
+                {/* Leyenda explicativa de columnas */}
+                <details className="mx-5 mb-4 bg-blue-50/50 border border-blue-200 rounded-lg overflow-hidden group">
+                  <summary className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-blue-50 list-none text-[0.75rem] text-blue-800">
+                    <span className="material-symbols-outlined text-blue-600 text-sm">help</span>
+                    <span className="font-semibold">¿Qué significa cada columna?</span>
+                    <span className="material-symbols-outlined text-blue-600 text-sm ml-auto group-open:rotate-180 transition-transform">expand_more</span>
+                  </summary>
+                  <div className="px-4 py-3 border-t border-blue-200 space-y-2 text-[0.75rem] text-slate-700 leading-relaxed">
+                    <p><strong>Cargo</strong> — el puesto requerido en el TDR (ej: "Gerente de Contrato", "Especialista en Estructuras").</p>
+                    <p><strong>Profesiones Aceptadas</strong> — los <u>títulos universitarios</u> que el profesional debe tener. Viene de la tabla <strong>B.1 "Calificación del Personal Clave"</strong> del TDR, columna "Formación Académica". Ejemplos: "Ingeniero Civil", "Arquitecto", "Tecnólogo Médico".</p>
+                    <p><strong>Experiencia Mínima</strong> — meses de experiencia requeridos + descripción de los trabajos que cuentan. Viene de la tabla <strong>B.2 "Experiencia del Personal Clave"</strong>.</p>
+                    <p><strong>Tipo de Obra</strong> — especialidad/subespecialidad de las obras válidas para acreditar experiencia (ej: "establecimientos de salud", "edificación educativa").</p>
+                    <p><strong>Cargos Válidos</strong> — <u>puestos equivalentes</u> que cuentan como experiencia del mismo cargo (ej: para "Gerente de Contrato" valen también "Gerente de Obra", "Gerente de Proyecto", "Coordinador de Obra"). Viene de B.2, columna "Trabajos o Prestaciones en la Actividad Requerida".</p>
+                    <p className="text-[0.6875rem] text-blue-700 mt-2">
+                      <strong>Diferencia clave:</strong> "Profesiones" son <em>títulos</em> del diploma (lo que estudió). "Cargos Válidos" son <em>puestos</em> del CV (cómo se llamó su rol en la obra).
+                    </p>
+                  </div>
+                </details>
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-surface-container-high">
                       <tr>
-                        {["#", "Cargo", "Profesiones Aceptadas", "Experiencia Mínima", "Tipo de Obra", "Cargos Válidos"].map((h) => (
-                          <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{h}</th>
+                        {([
+                          { label: "#", hint: "Número de fila" },
+                          { label: "Cargo", hint: "Puesto requerido por el TDR (tabla B.1 columna 'Cargo y/o Responsabilidad')" },
+                          { label: "Títulos (B.1)", hint: "Profesiones aceptadas — títulos universitarios válidos según la formación académica exigida en B.1" },
+                          { label: "Experiencia Mín.", hint: "Meses mínimos + descripción del trabajo válido (B.2)" },
+                          { label: "Especialidad / Sector", hint: "Tipo de obra válido (ej: establecimientos de salud, edificación educativa)" },
+                          { label: "Puestos Equivalentes (B.2)", hint: "Cargos similares que cuentan como experiencia del mismo puesto (columna 'Trabajos o Prestaciones' de B.2)" },
+                        ] as { label: string; hint: string }[]).map((col) => (
+                          <th
+                            key={col.label}
+                            title={col.hint}
+                            className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 cursor-help"
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              {col.label}
+                              <span className="material-symbols-outlined text-[12px] text-slate-400">info</span>
+                            </span>
+                          </th>
                         ))}
                       </tr>
                     </thead>
@@ -694,8 +729,24 @@ export default function JobDetailPage({
                   <table className="w-full text-left">
                     <thead className="bg-surface-container-high">
                       <tr>
-                        {["#", "Factor", "Aplica a", "Cargo", "Puntaje Máx.", "Metodología"].map((h) => (
-                          <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{h}</th>
+                        {([
+                          { label: "#", hint: "Número de fila" },
+                          { label: "Factor", hint: "Nombre del factor de evaluación (ej: Experiencia en la especialidad adicional, Certificaciones del personal)" },
+                          { label: "Aplica a", hint: "Si el factor se evalúa al Postor (la empresa) o al Personal Clave (los profesionales propuestos)" },
+                          { label: "Cargo", hint: "Cuando aplica=personal: el cargo específico que se evalúa. Vacío si aplica al postor" },
+                          { label: "Puntaje Máx.", hint: "Puntaje máximo asignable si cumple con el factor" },
+                          { label: "Metodología", hint: "Criterio o fórmula para asignar el puntaje (ej: '>80% del personal → 45 pts; >50% → 30 pts')" },
+                        ] as { label: string; hint: string }[]).map((col) => (
+                          <th
+                            key={col.label}
+                            title={col.hint}
+                            className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 cursor-help"
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              {col.label}
+                              <span className="material-symbols-outlined text-[12px] text-slate-400">info</span>
+                            </span>
+                          </th>
                         ))}
                       </tr>
                     </thead>
