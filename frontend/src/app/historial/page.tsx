@@ -27,14 +27,34 @@ const TYPE_OPTIONS: { value: FilterType; label: string }[] = [
   { value: "full", label: "Análisis Completo" },
 ];
 
+const PER_PAGE_OPTIONS = [10, 20, 50, 100];
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [search, setSearch] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  // Paginación
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Debounce de search (350ms) para no saturar al backend al teclear
+  useEffect(() => {
+    const t = setTimeout(() => setSearchDebounced(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Al cambiar filtros o buscar, volver a página 1
+  useEffect(() => {
+    setPage(1);
+  }, [searchDebounced, statusFilter, typeFilter, perPage]);
 
   // ── Rerun modal ────────────────────────────────────────────────────────
   const [rerunTarget, setRerunTarget] = useState<Job | null>(null);
@@ -71,15 +91,30 @@ export default function HistorialPage() {
   // ── Fetch + poll ─────────────────────────────────────────────────────────
   const fetchJobs = useCallback(async () => {
     try {
-      const res = await fetch("/api/jobs");
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("per_page", String(perPage));
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (typeFilter !== "all") params.set("job_type", typeFilter);
+      if (searchDebounced.trim()) params.set("q", searchDebounced.trim());
+      const res = await fetch(`/api/jobs?${params.toString()}`);
       if (res.ok) {
-        const data: Job[] = await res.json();
-        setJobs(data);
+        const data = await res.json();
+        // Compatibilidad: si el backend aun retorna array plano, adaptar
+        if (Array.isArray(data)) {
+          setJobs(data);
+          setTotal(data.length);
+          setTotalPages(1);
+        } else {
+          setJobs(data.items ?? []);
+          setTotal(data.total ?? 0);
+          setTotalPages(data.total_pages ?? 1);
+        }
       }
     } catch {
       /* silently ignore network errors during polling */
     }
-  }, []);
+  }, [page, perPage, statusFilter, typeFilter, searchDebounced]);
 
   useEffect(() => {
     fetchJobs();
@@ -102,20 +137,12 @@ export default function HistorialPage() {
     }
   };
 
-  // ── Filtered list ────────────────────────────────────────────────────────
-  const filtered = jobs.filter((job) => {
-    const matchesSearch =
-      search === "" ||
-      job.filename.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || job.status === statusFilter;
-    const matchesType =
-      typeFilter === "all" || job.job_type === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // ── Los filtros y la búsqueda ya se aplican en el backend ────────────────
+  // jobs contiene solo los items de la página actual post-filtro.
+  const filtered = jobs;
 
-  // ── Stats ────────────────────────────────────────────────────────────────
-  const totalCount = jobs.length;
+  // ── Stats (de la página actual para los 2 de "Errores" / "Procesando") ──
+  // total viene del backend y cuenta TODOS los jobs filtrados.
   const errorCount = jobs.filter((j) => j.status === "error").length;
   const activeCount = jobs.filter(
     (j) => j.status === "running" || j.status === "pending",
@@ -216,7 +243,7 @@ export default function HistorialPage() {
                   colSpan={7}
                   className="px-4 py-12 text-center text-sm text-on-surface-variant"
                 >
-                  {jobs.length === 0
+                  {total === 0
                     ? "No hay trabajos registrados."
                     : "No se encontraron resultados con los filtros aplicados."}
                 </td>
@@ -365,14 +392,95 @@ export default function HistorialPage() {
         </table>
       </div>
 
+      {/* ── Paginación ──────────────────────────────────────────────────── */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 px-1">
+        <div className="flex items-center gap-3 text-xs text-on-surface-variant">
+          <span>
+            Mostrando <strong>{filtered.length === 0 ? 0 : (page - 1) * perPage + 1}</strong>–
+            <strong>{(page - 1) * perPage + filtered.length}</strong> de{" "}
+            <strong>{total}</strong> resultados
+          </span>
+          <label className="flex items-center gap-2 ml-2">
+            <span className="text-[0.6875rem] uppercase tracking-wider text-outline">Por página</span>
+            <select
+              value={perPage}
+              onChange={(e) => setPerPage(Number(e.target.value))}
+              className="bg-surface-container-low border border-outline/10 rounded px-2 py-1 text-xs"
+            >
+              {PER_PAGE_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPage(1)}
+            disabled={page <= 1}
+            className="p-1.5 rounded text-xs text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:pointer-events-none"
+            title="Primera página"
+          >
+            <span className="material-symbols-outlined text-sm">first_page</span>
+          </button>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="p-1.5 rounded text-xs text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:pointer-events-none"
+            title="Página anterior"
+          >
+            <span className="material-symbols-outlined text-sm">chevron_left</span>
+          </button>
+
+          {/* Números de página (ventana de 5) */}
+          {(() => {
+            const pages: number[] = [];
+            const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+            const end = Math.min(totalPages, start + 4);
+            for (let p = start; p <= end; p++) pages.push(p);
+            return pages.map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={
+                  "min-w-[32px] px-2 py-1 rounded text-xs font-semibold " +
+                  (p === page
+                    ? "bg-primary text-white"
+                    : "text-on-surface-variant hover:bg-surface-container-high")
+                }
+              >
+                {p}
+              </button>
+            ));
+          })()}
+
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="p-1.5 rounded text-xs text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:pointer-events-none"
+            title="Página siguiente"
+          >
+            <span className="material-symbols-outlined text-sm">chevron_right</span>
+          </button>
+          <button
+            onClick={() => setPage(totalPages)}
+            disabled={page >= totalPages}
+            className="p-1.5 rounded text-xs text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:pointer-events-none"
+            title="Última página"
+          >
+            <span className="material-symbols-outlined text-sm">last_page</span>
+          </button>
+        </div>
+      </div>
+
       {/* ── Bottom Stats Row ────────────────────────────────────────────── */}
       <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total */}
         <div className="bg-surface-container-lowest p-6 rounded-lg border border-outline-variant/20 border-l-4 border-l-primary">
           <div className="text-[0.6875rem] font-bold uppercase tracking-wider text-outline mb-1">
-            Total Analizados
+            Total Resultados
           </div>
-          <div className="text-3xl font-bold text-primary">{totalCount}</div>
+          <div className="text-3xl font-bold text-primary">{total}</div>
         </div>
 
         {/* Errors */}

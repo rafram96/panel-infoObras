@@ -16,10 +16,13 @@ export default function Dashboard() {
     let cancelled = false;
     const fetchJobs = async () => {
       try {
-        const res = await fetch("/api/jobs");
+        // Dashboard solo muestra stats + recent — usa per_page amplio
+        const res = await fetch("/api/jobs?per_page=100");
         if (!res.ok) throw new Error("fetch failed");
-        const data: Job[] = await res.json();
-        if (!cancelled) setJobs(data);
+        const data = await res.json();
+        // Compat: endpoint nuevo retorna {items}, viejo retorna array
+        const list: Job[] = Array.isArray(data) ? data : (data.items ?? []);
+        if (!cancelled) setJobs(list);
       } catch {
         /* silently ignore — cards show 0 */
       } finally {

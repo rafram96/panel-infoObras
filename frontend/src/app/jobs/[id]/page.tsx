@@ -102,10 +102,13 @@ export default function JobDetailPage({
     if (!evalModalOpen) return;
     (async () => {
       try {
-        const res = await fetch("/api/jobs");
+        // Filtro server-side: solo jobs TDR completados, hasta 100
+        const res = await fetch("/api/jobs?job_type=tdr&status=done&per_page=100");
         if (res.ok) {
-          const all: Job[] = await res.json();
-          setTdrJobs(all.filter((j) => j.job_type === "tdr" && j.status === "done"));
+          const data = await res.json();
+          // Compat: endpoint nuevo retorna {items}, viejo retorna array
+          const all: Job[] = Array.isArray(data) ? data : (data.items ?? []);
+          setTdrJobs(all);
         }
       } catch { /* ignore */ }
     })();
