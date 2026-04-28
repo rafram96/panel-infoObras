@@ -14,20 +14,155 @@ interface Candidato {
   motivos: string[];
 }
 
+interface Supervisor {
+  nombre: string;
+  tipo: string;
+  tipo_persona?: string | null;
+  empresa?: string | null;
+  ruc?: string | null;
+  dni?: string | null;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+}
+
+interface Residente {
+  nombre: string;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+}
+
+interface Contratista {
+  tipo_empresa: string;
+  ruc: string | null;
+  nombre_empresa: string;
+  monto_soles: number | null;
+  numero_contrato: string | null;
+  fecha_contrato: string | null;
+  fecha_fin_contrato: string | null;
+}
+
+interface Adenda {
+  numero: string | null;
+  fecha: string | null;
+  descripcion: string | null;
+}
+
+interface Cronograma {
+  tipo: string | null;
+  fecha_aprobacion: string | null;
+  documento: string | null;
+  nueva_fecha_termino: string | null;
+}
+
+interface ModificacionPlazo {
+  tipo: string;
+  causal: string | null;
+  dias_aprobados: number;
+  fecha_aprobacion: string | null;
+  fecha_fin: string | null;
+}
+
+interface EntregaTerreno {
+  tipo_entrega: string | null;
+  fecha_entrega: string | null;
+  porcentaje: number | null;
+}
+
+interface Transferencia {
+  ambito: string | null;
+  entidad_origen: string | null;
+  monto: number | null;
+  documento: string | null;
+}
+
+interface Adelanto {
+  tipo: string | null;
+  monto: number | null;
+  fecha_entrega: string | null;
+  documento_aprobacion: string | null;
+}
+
+interface AdicionalDeductivo {
+  numero: string | null;
+  tipo: string | null;
+  subtipo: string | null;
+  causal: string | null;
+  fecha_aprobacion: string | null;
+  porcentaje: number | null;
+  monto: number | null;
+  documento: string | null;
+}
+
+interface Controversia {
+  mecanismo: string | null;
+  estado: string | null;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  documento: string | null;
+}
+
+interface AvanceMensual {
+  anio: number;
+  mes: number;
+  estado: string;
+  tipo_paralizacion: string | null;
+  fecha_paralizacion: string | null;
+  dias_paralizado: number;
+  causal: string | null;
+  avance_fisico_programado: number | null;
+  avance_fisico_real: number | null;
+  valorizado_programado: number | null;
+  valorizado_real: number | null;
+  pct_ejecucion_financiera: number | null;
+  monto_ejecucion_financiera: number | null;
+}
+
 interface ObraDetalle {
   cui: string;
   obra_id: number;
+  codigo_infobras: string | null;
   nombre: string;
   estado: string;
+  tipo_obra: string | null;
   entidad: string;
+  ejecutor: string | null;
+  ruc_ejecutor: string | null;
+  monto_contrato: number | null;
   fecha_inicio: string | null;
   fecha_fin: string | null;
   plazo_dias: number | null;
-  supervisores: { nombre: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null }[];
-  residentes: { nombre: string; fecha_inicio: string | null; fecha_fin: string | null }[];
+  porcentaje_avance_fisico: number | null;
+  monto_ejecutado_acumulado: number | null;
+  supervisores: Supervisor[];
+  residentes: Residente[];
+  contratistas: Contratista[];
+  adendas: Adenda[];
+  cronogramas: Cronograma[];
+  modificaciones_plazo: ModificacionPlazo[];
+  entregas_terreno: EntregaTerreno[];
+  transferencias: Transferencia[];
+  adelantos: Adelanto[];
+  adicionales_deductivos: AdicionalDeductivo[];
+  controversias: Controversia[];
+  avances: AvanceMensual[];
   paralizaciones: number;
   suspension_periods: { inicio: string; fin: string }[];
   total_avances: number;
+}
+
+const MES_NOMBRE = [
+  "—", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Setiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+function fmtSoles(v: number | null): string {
+  if (v === null || v === undefined) return "—";
+  return `S/ ${v.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function fmtPct(v: number | null): string {
+  if (v === null || v === undefined) return "—";
+  return `${v.toFixed(2)}%`;
 }
 
 export default function InfoObrasPage() {
@@ -42,6 +177,7 @@ export default function InfoObrasPage() {
   const [loading, setLoading] = useState(false);
   const [detalle, setDetalle] = useState<ObraDetalle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAvances, setShowAvances] = useState(false);
 
   const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,6 +210,7 @@ export default function InfoObrasPage() {
     setLoading(true);
     setError(null);
     setDetalle(null);
+    setShowAvances(false);
 
     try {
       const res = await fetch(`/api/infoobras/obra/${cui}`);
@@ -100,7 +237,7 @@ export default function InfoObrasPage() {
           </h2>
           <p className="text-on-surface-variant text-sm mt-2 max-w-2xl">
             Busque una obra por nombre del proyecto para verificar su estado,
-            supervisores, residentes y periodos de paralización en el portal
+            personal, contratistas, modificaciones y paralizaciones en el portal
             de la Contraloría.
           </p>
         </div>
@@ -193,7 +330,7 @@ export default function InfoObrasPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/10">
-                  {candidates.map((c, i) => (
+                  {candidates.map((c) => (
                     <tr
                       key={c.obra_id}
                       className="hover:bg-surface-container-high/40 transition-colors cursor-pointer"
@@ -255,13 +392,18 @@ export default function InfoObrasPage() {
         {/* Obra detail */}
         {detalle && (
           <section className="space-y-6">
-            {/* Header */}
+            {/* Header card */}
             <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 p-6">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="flex-1">
                   <h3 className="text-lg font-bold text-primary">{detalle.nombre}</h3>
-                  <div className="flex items-center gap-3 mt-2">
+                  <div className="flex items-center gap-3 mt-2 flex-wrap">
                     <span className="text-xs font-mono text-secondary">CUI: {detalle.cui}</span>
+                    {detalle.codigo_infobras && (
+                      <span className="text-xs font-mono text-secondary">
+                        Cód. InfoObras: {detalle.codigo_infobras}
+                      </span>
+                    )}
                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                       detalle.estado === "En Ejecución" ? "bg-blue-100 text-blue-700" :
                       detalle.estado === "Finalizado" ? "bg-green-100 text-green-700" :
@@ -269,17 +411,21 @@ export default function InfoObrasPage() {
                     }`}>
                       {detalle.estado}
                     </span>
+                    {detalle.tipo_obra && (
+                      <span className="text-xs text-on-surface-variant">{detalle.tipo_obra}</span>
+                    )}
                   </div>
                 </div>
                 <button
-                  onClick={() => { setDetalle(null); }}
+                  onClick={() => { setDetalle(null); setShowAvances(false); }}
                   className="text-outline hover:text-primary"
                 >
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              {/* Cabecera datos generales */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Entidad</p>
                   <p className="text-xs text-on-surface">{detalle.entidad || "—"}</p>
@@ -293,41 +439,92 @@ export default function InfoObrasPage() {
                   <p className="text-xs text-on-surface">{detalle.plazo_dias ? `${detalle.plazo_dias} días` : "—"}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avances</p>
-                  <p className="text-xs text-on-surface">{detalle.total_avances} registros</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avance Físico</p>
+                  <p className="text-xs text-on-surface font-bold">
+                    {fmtPct(detalle.porcentaje_avance_fisico)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Monto Contrato</p>
+                  <p className="text-xs text-on-surface">{fmtSoles(detalle.monto_contrato)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ejecutado</p>
+                  <p className="text-xs text-on-surface">{fmtSoles(detalle.monto_ejecutado_acumulado)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ejecutor</p>
+                  <p className="text-xs text-on-surface">{detalle.ejecutor || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">RUC Ejecutor</p>
+                  <p className="text-xs text-on-surface font-mono">{detalle.ruc_ejecutor || "—"}</p>
                 </div>
               </div>
             </div>
 
-            {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-surface-container-lowest p-4 border-l-4 border-blue-500 shadow-ambient rounded-xl">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Supervisores</p>
-                <p className="text-2xl font-bold text-primary">{detalle.supervisores.length}</p>
-              </div>
-              <div className="bg-surface-container-lowest p-4 border-l-4 border-violet-500 shadow-ambient rounded-xl">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Residentes</p>
-                <p className="text-2xl font-bold text-primary">{detalle.residentes.length}</p>
-              </div>
-              <div className={`bg-surface-container-lowest p-4 border-l-4 shadow-ambient rounded-xl ${detalle.paralizaciones > 0 ? "border-red-500" : "border-green-500"}`}>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Paralizaciones</p>
-                <p className={`text-2xl font-bold ${detalle.paralizaciones > 0 ? "text-red-600" : "text-green-600"}`}>{detalle.paralizaciones}</p>
-              </div>
+            {/* Summary cards (counts) */}
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              <SummaryCard label="Avances" value={detalle.total_avances} color="slate" />
+              <SummaryCard label="Supervisores" value={detalle.supervisores.length} color="blue" />
+              <SummaryCard label="Residentes" value={detalle.residentes.length} color="violet" />
+              <SummaryCard label="Contratistas" value={detalle.contratistas.length} color="emerald" />
+              <SummaryCard label="Adendas" value={detalle.adendas.length} color="cyan" />
+              <SummaryCard
+                label="Paralizaciones"
+                value={detalle.paralizaciones}
+                color={detalle.paralizaciones > 0 ? "red" : "green"}
+              />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              <SummaryCard label="Mod. Plazo" value={detalle.modificaciones_plazo.length} color="amber" />
+              <SummaryCard label="Adicionales" value={detalle.adicionales_deductivos.length} color="amber" />
+              <SummaryCard label="Cronogramas" value={detalle.cronogramas.length} color="slate" />
+              <SummaryCard label="Adelantos" value={detalle.adelantos.length} color="slate" />
+              <SummaryCard label="Transferencias" value={detalle.transferencias.length} color="slate" />
+              <SummaryCard
+                label="Controversias"
+                value={detalle.controversias.length}
+                color={detalle.controversias.length > 0 ? "red" : "slate"}
+              />
             </div>
 
-            {/* Supervisors */}
-            {detalle.supervisores.length > 0 && (
-              <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
-                <div className="px-5 py-3 border-b border-outline-variant/10">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">badge</span>
-                    Supervisores / Inspectores
-                  </h4>
-                </div>
+            {/* Contratistas */}
+            {detalle.contratistas.length > 0 && (
+              <Section title="Contratistas Ejecutores" icon="business">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-surface-container-high">
                     <tr>
-                      {["Nombre", "Tipo", "Inicio", "Fin"].map((h) => (
+                      {["Tipo", "RUC", "Empresa", "Monto", "N° Contrato", "Periodo"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {detalle.contratistas.map((c, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 text-secondary">{c.tipo_empresa}</td>
+                        <td className="px-3 py-2 text-secondary font-mono">{c.ruc || "—"}</td>
+                        <td className="px-3 py-2 font-medium text-on-surface">{c.nombre_empresa}</td>
+                        <td className="px-3 py-2 text-secondary">{fmtSoles(c.monto_soles)}</td>
+                        <td className="px-3 py-2 text-secondary">{c.numero_contrato || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">
+                          {c.fecha_contrato || "?"} — {c.fecha_fin_contrato || "vigente"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
+
+            {/* Supervisores */}
+            {detalle.supervisores.length > 0 && (
+              <Section title="Supervisores / Inspectores" icon="badge">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["Nombre", "Tipo", "Empresa / RUC", "DNI", "Inicio", "Fin"].map((h) => (
                         <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
                       ))}
                     </tr>
@@ -337,24 +534,27 @@ export default function InfoObrasPage() {
                       <tr key={i}>
                         <td className="px-3 py-2 font-medium text-on-surface">{s.nombre}</td>
                         <td className="px-3 py-2 text-secondary">{s.tipo}</td>
+                        <td className="px-3 py-2 text-secondary">
+                          {s.empresa ? (
+                            <>
+                              <div className="text-xs">{s.empresa}</div>
+                              {s.ruc && <div className="text-[10px] font-mono text-on-surface-variant">{s.ruc}</div>}
+                            </>
+                          ) : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-secondary font-mono">{s.dni || "—"}</td>
                         <td className="px-3 py-2 text-secondary">{s.fecha_inicio || "—"}</td>
                         <td className="px-3 py-2 text-secondary">{s.fecha_fin || "vigente"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </Section>
             )}
 
-            {/* Residents */}
+            {/* Residentes */}
             {detalle.residentes.length > 0 && (
-              <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
-                <div className="px-5 py-3 border-b border-outline-variant/10">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">engineering</span>
-                    Residentes
-                  </h4>
-                </div>
+              <Section title="Residentes" icon="engineering">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-surface-container-high">
                     <tr>
@@ -373,18 +573,218 @@ export default function InfoObrasPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </Section>
+            )}
+
+            {/* Modificaciones de plazo */}
+            {detalle.modificaciones_plazo.length > 0 && (
+              <Section title="Modificaciones de Plazo" icon="schedule">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["Tipo", "Causal", "Días", "Fecha Aprob.", "Fecha Fin"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {detalle.modificaciones_plazo.map((m, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 font-medium text-on-surface">{m.tipo}</td>
+                        <td className="px-3 py-2 text-secondary">{m.causal || "—"}</td>
+                        <td className="px-3 py-2 text-secondary font-bold">{m.dias_aprobados}</td>
+                        <td className="px-3 py-2 text-secondary">{m.fecha_aprobacion || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{m.fecha_fin || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
+
+            {/* Adendas */}
+            {detalle.adendas.length > 0 && (
+              <Section title="Adendas al Contrato" icon="article">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["N°", "Fecha", "Descripción"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {detalle.adendas.map((a, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 text-secondary font-mono">{a.numero || i + 1}</td>
+                        <td className="px-3 py-2 text-secondary">{a.fecha || "—"}</td>
+                        <td className="px-3 py-2 text-on-surface">{a.descripcion || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
+
+            {/* Adicionales / Deductivos */}
+            {detalle.adicionales_deductivos.length > 0 && (
+              <Section title="Adicionales / Deductivos / Reducciones" icon="add_circle">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["N°", "Tipo", "Subtipo", "Causal", "Fecha", "%", "Monto"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {detalle.adicionales_deductivos.map((a, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 text-secondary font-mono">{a.numero || i + 1}</td>
+                        <td className="px-3 py-2 font-medium text-on-surface">{a.tipo || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{a.subtipo || "—"}</td>
+                        <td className="px-3 py-2 text-secondary text-[11px]">{a.causal || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{a.fecha_aprobacion || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{fmtPct(a.porcentaje)}</td>
+                        <td className="px-3 py-2 text-secondary">{fmtSoles(a.monto)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
+
+            {/* Cronogramas */}
+            {detalle.cronogramas.length > 0 && (
+              <Section title="Cronograma" icon="event">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["Tipo", "Fecha Aprob.", "Documento", "Nueva F. Término"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {detalle.cronogramas.map((c, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 font-medium text-on-surface">{c.tipo || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{c.fecha_aprobacion || "—"}</td>
+                        <td className="px-3 py-2 text-secondary text-[11px]">{c.documento || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{c.nueva_fecha_termino || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
+
+            {/* Entrega de terreno */}
+            {detalle.entregas_terreno.length > 0 && (
+              <Section title="Entrega de Terreno" icon="terrain">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["#", "Tipo", "Fecha", "%"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {detalle.entregas_terreno.map((e, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 text-secondary font-mono">{i + 1}</td>
+                        <td className="px-3 py-2 font-medium text-on-surface">{e.tipo_entrega || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{e.fecha_entrega || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">
+                          {e.porcentaje !== null ? `${e.porcentaje}%` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
+
+            {/* Transferencias */}
+            {detalle.transferencias.length > 0 && (
+              <Section title="Transferencias Financieras" icon="account_balance">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["Ámbito", "Entidad Origen", "Monto", "Documento"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {detalle.transferencias.map((t, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 text-secondary">{t.ambito || "—"}</td>
+                        <td className="px-3 py-2 font-medium text-on-surface">{t.entidad_origen || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{fmtSoles(t.monto)}</td>
+                        <td className="px-3 py-2 text-secondary text-[11px]">{t.documento || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
+
+            {/* Adelantos */}
+            {detalle.adelantos.length > 0 && (
+              <Section title="Garantías / Adelantos" icon="payments">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["Tipo", "Monto", "Fecha", "Documento"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {detalle.adelantos.map((a, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 font-medium text-on-surface">{a.tipo || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{fmtSoles(a.monto)}</td>
+                        <td className="px-3 py-2 text-secondary">{a.fecha_entrega || "—"}</td>
+                        <td className="px-3 py-2 text-secondary text-[11px]">{a.documento_aprobacion || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            )}
+
+            {/* Controversias */}
+            {detalle.controversias.length > 0 && (
+              <Section title="Controversias" icon="gavel" accent="red">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {["Mecanismo", "Estado", "Inicio", "Fin", "Documento"].map((h) => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {detalle.controversias.map((c, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 font-medium text-on-surface">{c.mecanismo || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{c.estado || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{c.fecha_inicio || "—"}</td>
+                        <td className="px-3 py-2 text-secondary">{c.fecha_fin || "—"}</td>
+                        <td className="px-3 py-2 text-secondary text-[11px]">{c.documento || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
             )}
 
             {/* Suspension periods */}
             {detalle.suspension_periods.length > 0 && (
-              <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
-                <div className="px-5 py-3 border-b border-outline-variant/10">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-error flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">warning</span>
-                    Periodos de Paralización / Suspensión
-                  </h4>
-                </div>
+              <Section title="Periodos de Paralización / Suspensión" icon="warning" accent="red">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-surface-container-high">
                     <tr>
@@ -403,11 +803,139 @@ export default function InfoObrasPage() {
                     ))}
                   </tbody>
                 </table>
+              </Section>
+            )}
+
+            {/* Avances mensuales (collapsible) */}
+            {detalle.avances.length > 0 && (
+              <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+                <button
+                  onClick={() => setShowAvances(!showAvances)}
+                  className="w-full px-5 py-3 border-b border-outline-variant/10 flex items-center justify-between hover:bg-surface-container-high/40 transition-colors"
+                >
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">timeline</span>
+                    Avances Mensuales ({detalle.avances.length})
+                  </h4>
+                  <span className="material-symbols-outlined text-on-surface-variant text-lg">
+                    {showAvances ? "expand_less" : "expand_more"}
+                  </span>
+                </button>
+                {showAvances && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-surface-container-high">
+                        <tr>
+                          {[
+                            "Mes/Año", "Estado", "Av.Físico Prog", "Av.Físico Real",
+                            "Valoriz. Prog", "Valoriz. Real", "% Ejec. Fin.", "Monto Ejec."
+                          ].map((h) => (
+                            <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-outline-variant/10">
+                        {detalle.avances.map((a, i) => (
+                          <tr key={i}>
+                            <td className="px-3 py-2 font-medium text-on-surface">
+                              {MES_NOMBRE[a.mes] || a.mes} {a.anio}
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                                a.estado === "Paralizado" ? "bg-red-100 text-red-700" :
+                                a.estado === "Finalizado" ? "bg-green-100 text-green-700" :
+                                "bg-blue-100 text-blue-700"
+                              }`}>
+                                {a.estado}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-secondary">{fmtPct(a.avance_fisico_programado)}</td>
+                            <td className="px-3 py-2 text-secondary font-bold">{fmtPct(a.avance_fisico_real)}</td>
+                            <td className="px-3 py-2 text-secondary">{fmtSoles(a.valorizado_programado)}</td>
+                            <td className="px-3 py-2 text-secondary">{fmtSoles(a.valorizado_real)}</td>
+                            <td className="px-3 py-2 text-secondary">{fmtPct(a.pct_ejecucion_financiera)}</td>
+                            <td className="px-3 py-2 text-secondary">{fmtSoles(a.monto_ejecucion_financiera)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </section>
         )}
       </div>
     </PanelShell>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Componentes auxiliares
+// ────────────────────────────────────────────────────────────────────────────
+
+const COLOR_BORDER: Record<string, string> = {
+  slate: "border-slate-400",
+  blue: "border-blue-500",
+  violet: "border-violet-500",
+  emerald: "border-emerald-500",
+  cyan: "border-cyan-500",
+  amber: "border-amber-500",
+  red: "border-red-500",
+  green: "border-green-500",
+};
+
+const COLOR_TEXT: Record<string, string> = {
+  slate: "text-slate-700",
+  blue: "text-blue-700",
+  violet: "text-violet-700",
+  emerald: "text-emerald-700",
+  cyan: "text-cyan-700",
+  amber: "text-amber-700",
+  red: "text-red-600",
+  green: "text-green-600",
+};
+
+function SummaryCard({
+  label,
+  value,
+  color = "slate",
+}: {
+  label: string;
+  value: number;
+  color?: string;
+}) {
+  return (
+    <div
+      className={`bg-surface-container-lowest p-3 border-l-4 shadow-ambient rounded-xl ${COLOR_BORDER[color] || COLOR_BORDER.slate}`}
+    >
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{label}</p>
+      <p className={`text-xl font-bold ${COLOR_TEXT[color] || "text-primary"}`}>{value}</p>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  icon,
+  accent = "primary",
+  children,
+}: {
+  title: string;
+  icon: string;
+  accent?: "primary" | "red";
+  children: React.ReactNode;
+}) {
+  const titleColor = accent === "red" ? "text-error" : "text-primary";
+  return (
+    <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+      <div className="px-5 py-3 border-b border-outline-variant/10">
+        <h4 className={`text-xs font-bold uppercase tracking-wider ${titleColor} flex items-center gap-1`}>
+          <span className="material-symbols-outlined text-sm">{icon}</span>
+          {title}
+        </h4>
+      </div>
+      <div className="overflow-x-auto">{children}</div>
+    </div>
   );
 }
