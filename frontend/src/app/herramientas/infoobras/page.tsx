@@ -165,10 +165,18 @@ function fmtPct(v: number | null): string {
   return `${v.toFixed(2)}%`;
 }
 
+type Modo = "nombre" | "cui";
+
 export default function InfoObrasPage() {
+  const [modo, setModo] = useState<Modo>("nombre");
+
+  // Modo "nombre"
   const [projectName, setProjectName] = useState("");
   const [certDate, setCertDate] = useState("");
   const [entidad, setEntidad] = useState("");
+
+  // Modo "cui"
+  const [cuiInput, setCuiInput] = useState("");
 
   const [searching, setSearching] = useState(false);
   const [candidates, setCandidates] = useState<Candidato[]>([]);
@@ -206,6 +214,21 @@ export default function InfoObrasPage() {
     }
   };
 
+  const handleCuiSearch = async (e: FormEvent) => {
+    e.preventDefault();
+    const cui = cuiInput.trim();
+    if (!cui) return;
+    // Validacion ligera: CUI suele ser 6-10 digitos
+    if (!/^\d{6,10}$/.test(cui)) {
+      setError("El CUI debe tener entre 6 y 10 dígitos");
+      return;
+    }
+    setError(null);
+    setCandidates([]);
+    setSearched(false);
+    await handleSelect(cui);
+  };
+
   const handleSelect = async (cui: string) => {
     setLoading(true);
     setError(null);
@@ -214,6 +237,9 @@ export default function InfoObrasPage() {
 
     try {
       const res = await fetch(`/api/infoobras/obra/${cui}`);
+      if (res.status === 404) {
+        throw new Error(`CUI ${cui} no encontrado en InfoObras`);
+      }
       if (!res.ok) throw new Error(`Error ${res.status}`);
       const data: ObraDetalle = await res.json();
       setDetalle(data);
@@ -242,62 +268,132 @@ export default function InfoObrasPage() {
           </p>
         </div>
 
-        {/* Search form */}
-        <form onSubmit={handleSearch} className="max-w-[700px] space-y-4 mb-8">
-          <div>
-            <label className="block text-[0.6875rem] font-bold uppercase tracking-wider text-secondary mb-2">
-              Nombre del Proyecto (del certificado)
-            </label>
-            <textarea
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder="MEJORAMIENTO Y AMPLIACIÓN DE LOS SERVICIOS DE SALUD DEL HOSPITAL..."
-              rows={3}
-              className="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-sm font-medium p-3 rounded-lg text-on-surface resize-none"
-            />
-          </div>
+        {/* Tabs de modo */}
+        <div className="max-w-[700px] mb-4 flex gap-1 border-b border-outline-variant/20">
+          <button
+            type="button"
+            onClick={() => { setModo("nombre"); setError(null); }}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+              modo === "nombre"
+                ? "text-primary border-b-2 border-primary -mb-px"
+                : "text-on-surface-variant hover:text-primary"
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm align-middle mr-1">search</span>
+            Buscar por Nombre
+          </button>
+          <button
+            type="button"
+            onClick={() => { setModo("cui"); setError(null); }}
+            className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
+              modo === "cui"
+                ? "text-primary border-b-2 border-primary -mb-px"
+                : "text-on-surface-variant hover:text-primary"
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm align-middle mr-1">tag</span>
+            Buscar por CUI
+          </button>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Form: por NOMBRE */}
+        {modo === "nombre" && (
+          <form onSubmit={handleSearch} className="max-w-[700px] space-y-4 mb-8">
             <div>
               <label className="block text-[0.6875rem] font-bold uppercase tracking-wider text-secondary mb-2">
-                Fecha del Certificado (opcional)
+                Nombre del Proyecto (del certificado)
               </label>
-              <input
-                type="date"
-                value={certDate}
-                onChange={(e) => setCertDate(e.target.value)}
-                className="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-sm font-medium p-3 rounded-lg text-on-surface"
+              <textarea
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="MEJORAMIENTO Y AMPLIACIÓN DE LOS SERVICIOS DE SALUD DEL HOSPITAL..."
+                rows={3}
+                className="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-sm font-medium p-3 rounded-lg text-on-surface resize-none"
               />
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[0.6875rem] font-bold uppercase tracking-wider text-secondary mb-2">
+                  Fecha del Certificado (opcional)
+                </label>
+                <input
+                  type="date"
+                  value={certDate}
+                  onChange={(e) => setCertDate(e.target.value)}
+                  className="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-sm font-medium p-3 rounded-lg text-on-surface"
+                />
+              </div>
+              <div>
+                <label className="block text-[0.6875rem] font-bold uppercase tracking-wider text-secondary mb-2">
+                  Entidad (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={entidad}
+                  onChange={(e) => setEntidad(e.target.value)}
+                  placeholder="ESSALUD, Gobierno Regional, etc."
+                  className="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-sm font-medium p-3 rounded-lg text-on-surface"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={!projectName.trim() || searching}
+                className="px-8 py-3 primary-gradient text-white rounded-lg shadow-[0_4px_14px_0_rgba(2,36,72,0.39)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-lg">
+                  {searching ? "progress_activity" : "search"}
+                </span>
+                <span className="text-sm font-extrabold uppercase tracking-[0.1rem]">
+                  {searching ? "Buscando..." : "Buscar en InfoObras"}
+                </span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Form: por CUI */}
+        {modo === "cui" && (
+          <form onSubmit={handleCuiSearch} className="max-w-[700px] space-y-4 mb-8">
             <div>
               <label className="block text-[0.6875rem] font-bold uppercase tracking-wider text-secondary mb-2">
-                Entidad (opcional)
+                Código Único de Inversión (CUI)
               </label>
               <input
                 type="text"
-                value={entidad}
-                onChange={(e) => setEntidad(e.target.value)}
-                placeholder="ESSALUD, Gobierno Regional, etc."
-                className="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-sm font-medium p-3 rounded-lg text-on-surface"
+                inputMode="numeric"
+                pattern="\d{6,10}"
+                value={cuiInput}
+                onChange={(e) => setCuiInput(e.target.value.replace(/\D/g, ""))}
+                placeholder="2427358"
+                maxLength={10}
+                className="w-full bg-surface-container-low border-0 focus:ring-2 focus:ring-primary-fixed text-base font-mono font-medium p-3 rounded-lg text-on-surface tracking-widest"
               />
+              <p className="text-[10px] text-on-surface-variant mt-1.5">
+                Solo números (6 a 10 dígitos). Va directo al detalle de la obra sin
+                desambiguación.
+              </p>
             </div>
-          </div>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={!projectName.trim() || searching}
-              className="px-8 py-3 primary-gradient text-white rounded-lg shadow-[0_4px_14px_0_rgba(2,36,72,0.39)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-lg">
-                {searching ? "progress_activity" : "search"}
-              </span>
-              <span className="text-sm font-extrabold uppercase tracking-[0.1rem]">
-                {searching ? "Buscando..." : "Buscar en InfoObras"}
-              </span>
-            </button>
-          </div>
-        </form>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={!cuiInput.trim() || loading}
+                className="px-8 py-3 primary-gradient text-white rounded-lg shadow-[0_4px_14px_0_rgba(2,36,72,0.39)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-lg">
+                  {loading ? "progress_activity" : "tag"}
+                </span>
+                <span className="text-sm font-extrabold uppercase tracking-[0.1rem]">
+                  {loading ? "Cargando..." : "Consultar CUI"}
+                </span>
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Error */}
         {error && (
