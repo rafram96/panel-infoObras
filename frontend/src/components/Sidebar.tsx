@@ -58,8 +58,8 @@ export default function Sidebar() {
                 href={href}
                 className={
                   isActive(href)
-                    ? "flex items-center px-3 h-10 bg-white text-primary font-bold border-l-4 border-primary transition-colors duration-150"
-                    : "flex items-center px-3 h-10 text-slate-600 hover:text-primary hover:bg-surface-container-high transition-colors duration-150"
+                    ? "flex items-center px-3 h-10 bg-surface-container-lowest text-primary font-bold border-l-4 border-primary transition-colors duration-150"
+                    : "flex items-center px-3 h-10 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors duration-150"
                 }
               >
                 <span
@@ -88,8 +88,8 @@ export default function Sidebar() {
                 href={href}
                 className={
                   isActive(href)
-                    ? "flex items-center px-3 h-10 bg-white text-primary font-bold border-l-4 border-primary transition-colors duration-150"
-                    : "flex items-center px-3 h-10 text-slate-600 hover:text-primary hover:bg-surface-container-high transition-colors duration-150"
+                    ? "flex items-center px-3 h-10 bg-surface-container-lowest text-primary font-bold border-l-4 border-primary transition-colors duration-150"
+                    : "flex items-center px-3 h-10 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors duration-150"
                 }
               >
                 <span
@@ -118,8 +118,8 @@ export default function Sidebar() {
                 href={href}
                 className={
                   isActive(href)
-                    ? "flex items-center px-3 h-10 bg-white text-primary font-bold border-l-4 border-primary transition-colors duration-150"
-                    : "flex items-center px-3 h-10 text-slate-600 hover:text-primary hover:bg-surface-container-high transition-colors duration-150"
+                    ? "flex items-center px-3 h-10 bg-surface-container-lowest text-primary font-bold border-l-4 border-primary transition-colors duration-150"
+                    : "flex items-center px-3 h-10 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors duration-150"
                 }
               >
                 <span

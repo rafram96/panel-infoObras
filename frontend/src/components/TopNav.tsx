@@ -1,5 +1,7 @@
 "use client";
 
+import ThemeToggle from "./ThemeToggle";
+
 interface TopNavProps {
   title: string;
   subtitle?: string;
@@ -13,18 +15,19 @@ export default function TopNav({ title, subtitle }: TopNavProps) {
           {title}
         </h1>
         {subtitle && (
-          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-400">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">
             {subtitle}
           </span>
         )}
       </div>
       <div className="flex items-center gap-2">
-        <button className="p-1.5 rounded text-slate-500 hover:bg-surface-container transition-all duration-200">
+        <ThemeToggle />
+        <button className="p-1.5 rounded text-secondary hover:bg-surface-container transition-all duration-200">
           <span className="material-symbols-outlined text-[20px]">
             notifications
           </span>
         </button>
-        <button className="p-1.5 rounded text-slate-500 hover:bg-surface-container transition-all duration-200">
+        <button className="p-1.5 rounded text-secondary hover:bg-surface-container transition-all duration-200">
           <span className="material-symbols-outlined text-[20px]">
             settings
           </span>
