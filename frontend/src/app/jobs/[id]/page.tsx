@@ -246,7 +246,7 @@ export default function JobDetailPage({
   if (error && !detail) {
     return (
       <PanelShell title="Error" subtitle={`Expediente #${id}`}>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700 text-sm">
+        <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-xl p-6 text-red-700 dark:text-red-300 text-sm">
           <span className="material-symbols-outlined align-middle mr-2">
             error
           </span>
@@ -521,15 +521,15 @@ export default function JobDetailPage({
 
       {/* ── ERROR VIEW ───────────────────────────────────────────────────── */}
       {isError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-3">
-          <span className="material-symbols-outlined text-red-600 text-xl mt-0.5">
+        <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-xl p-6 flex items-start gap-3">
+          <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-xl mt-0.5">
             error
           </span>
           <div>
-            <p className="text-sm font-semibold text-red-700 mb-1">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-300 mb-1">
               El análisis terminó con error
             </p>
-            <p className="text-sm text-red-600">
+            <p className="text-sm text-red-600 dark:text-red-400">
               {detail.error ?? "Error desconocido durante el procesamiento."}
             </p>
           </div>
@@ -550,7 +550,7 @@ export default function JobDetailPage({
                 valueClass={confColor(r.conf_promedio)} />
               <SummaryCard icon="warning" label="Errores OCR"
                 value={String(r.pages_error)}
-                valueClass={r.pages_error > 0 ? "text-red-600" : undefined} />
+                valueClass={r.pages_error > 0 ? "text-red-600 dark:text-red-400" : undefined} />
             </section>
 
             {activeTab === "metricas" && (
@@ -577,7 +577,7 @@ export default function JobDetailPage({
                     </>
                   )}
                   {r.pages_error > 0 && (
-                    <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200">
+                    <span className="inline-flex items-center gap-1.5 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/50">
                       <span className="material-symbols-outlined text-sm">error</span>
                       Errores: {r.pages_error} págs
                     </span>
@@ -645,16 +645,16 @@ export default function JobDetailPage({
                   const flagged = r.rtm_personal.filter((x) => x._needs_review);
                   if (flagged.length === 0) return null;
                   return (
-                    <div className="mx-5 mt-4 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="mx-5 mt-4 mb-2 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <span className="material-symbols-outlined text-red-600 text-base shrink-0 mt-0.5">
+                        <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-base shrink-0 mt-0.5">
                           warning
                         </span>
                         <div className="flex-1">
-                          <p className="text-[0.8125rem] font-bold text-red-800">
+                          <p className="text-[0.8125rem] font-bold text-red-800 dark:text-red-200">
                             {flagged.length} cargo{flagged.length !== 1 ? "s" : ""} requieren revisión manual
                           </p>
-                          <p className="text-[0.75rem] text-red-700 leading-relaxed mt-1">
+                          <p className="text-[0.75rem] text-red-700 dark:text-red-300 leading-relaxed mt-1">
                             El sistema detectó posible alucinación del LLM: cargos cuyo nombre
                             no aparece en el texto fuente, o con patrón copy-paste formulaico
                             (mismas profesiones/cargos similares entre varios ítems). Revisa
@@ -1050,7 +1050,7 @@ function TdrRequisitoRow({
       className={
         "transition-colors align-top " +
         (needsReview
-          ? "bg-red-50/60 hover:bg-red-50 border-l-4 border-red-500"
+          ? "bg-red-50/60 hover:bg-red-50 dark:bg-red-950/30 dark:hover:bg-red-950/50 border-l-4 border-red-500"
           : "hover:bg-surface-container-high/40")
       }
     >
@@ -1059,7 +1059,7 @@ function TdrRequisitoRow({
         <div className="flex items-start gap-2">
           {needsReview && (
             <span
-              className="material-symbols-outlined text-red-600 text-base shrink-0"
+              className="material-symbols-outlined text-red-600 dark:text-red-400 text-base shrink-0"
               title={reviewReason}
             >
               warning
@@ -1068,14 +1068,14 @@ function TdrRequisitoRow({
           <span
             className={
               "whitespace-normal break-words leading-snug " +
-              (needsReview ? "text-red-700" : "text-primary")
+              (needsReview ? "text-red-700 dark:text-red-300" : "text-primary")
             }
           >
             {req.cargo}
           </span>
         </div>
         {needsReview && (
-          <p className="text-[0.6875rem] text-red-600 mt-1 leading-snug whitespace-normal break-words">
+          <p className="text-[0.6875rem] text-red-600 dark:text-red-400 mt-1 leading-snug whitespace-normal break-words">
             {reviewReason}
           </p>
         )}
