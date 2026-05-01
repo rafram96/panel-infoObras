@@ -1040,9 +1040,8 @@ function TdrRequisitoRow({
 }) {
   const expMin = req.experiencia_minima;
   const meses = expMin?.cantidad;
-  const expLabel = meses
-    ? `${meses} meses${expMin?.descripcion ? ` — ${expMin.descripcion.slice(0, 80)}` : ""}`
-    : "\u2014";
+  const descripcion = expMin?.descripcion?.trim();
+  const cargosSim = expMin?.cargos_similares_validos ?? [];
   const needsReview = Boolean(req._needs_review);
   const reviewReason = req._review_reason || "Marcado para revisión manual";
 
@@ -1082,16 +1081,51 @@ function TdrRequisitoRow({
         )}
       </td>
       <td className="px-3 py-3 text-xs text-secondary max-w-[240px] whitespace-normal break-words leading-snug">
-        {req.profesiones_aceptadas?.join(", ") || "\u2014"}
+        {req.profesiones_aceptadas?.length ? (
+          <ul className="list-disc list-inside space-y-0.5 marker:text-slate-400">
+            {req.profesiones_aceptadas.map((p, i) => (
+              <li key={i}>{p}</li>
+            ))}
+          </ul>
+        ) : (
+          "\u2014"
+        )}
       </td>
-      <td className="px-3 py-3 text-xs text-secondary max-w-[320px] whitespace-normal break-words leading-snug">
-        {expLabel}
+      <td className="px-3 py-3 text-xs text-secondary max-w-[420px] whitespace-normal break-words leading-snug">
+        {meses ? (
+          <div className="space-y-1.5">
+            <div className="font-semibold text-primary">{meses} meses</div>
+            {descripcion && (
+              <details className="group">
+                <summary className="cursor-pointer text-[0.7rem] text-blue-600 hover:underline list-none flex items-center gap-1 select-none">
+                  <span className="material-symbols-outlined text-sm transition-transform group-open:rotate-90">
+                    chevron_right
+                  </span>
+                  <span>Ver descripción literal del PDF</span>
+                </summary>
+                <p className="mt-1.5 text-[0.7rem] text-slate-600 whitespace-pre-wrap leading-relaxed border-l-2 border-slate-300 pl-2">
+                  {descripcion}
+                </p>
+              </details>
+            )}
+          </div>
+        ) : (
+          "\u2014"
+        )}
       </td>
       <td className="px-3 py-3 text-xs text-secondary max-w-[180px] whitespace-normal break-words leading-snug">
         {req.tipo_obra_valido || "\u2014"}
       </td>
       <td className="px-3 py-3 text-xs text-secondary max-w-[320px] whitespace-normal break-words leading-snug">
-        {expMin?.cargos_similares_validos?.join(", ") || "\u2014"}
+        {cargosSim.length ? (
+          <ul className="list-disc list-inside space-y-0.5 marker:text-slate-400">
+            {cargosSim.map((c, i) => (
+              <li key={i}>{c}</li>
+            ))}
+          </ul>
+        ) : (
+          "\u2014"
+        )}
       </td>
     </tr>
   );
