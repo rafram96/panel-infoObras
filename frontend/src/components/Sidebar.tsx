@@ -11,7 +11,7 @@ const NAV_MAIN = [
 
 const NAV_TOOLS = [
   { href: "/herramientas/extraccion", icon: "person_search", label: "Profesionales" },
-  { href: "/herramientas/profesionales", icon: "compare_arrows", label: "Cruce con InfoObras" },
+  { href: "/herramientas/profesionales", icon: "compare_arrows", label: "Cruces (Pros)" },
   { href: "/herramientas/tdr", icon: "fact_check", label: "Requisitos TDR" },
   { href: "/herramientas/infoobras", icon: "domain", label: "InfoObras" },
   { href: "/herramientas/debug-pdfplumber", icon: "bug_report", label: "Debug pdfplumber" },

@@ -359,6 +359,32 @@ export default function JobDetailPage({
                 {excelExists ? "Re-evaluar RTM" : "Evaluar RTM"}
               </button>
             )}
+
+            {/* Cruces externos — solo para jobs extraction completados */}
+            {detail.job_type === "extraction" && (
+              <>
+                <a
+                  href={`/herramientas/profesionales?tab=infoobras&extraction_job_id=${detail.id}`}
+                  className="inline-flex items-center gap-1.5 bg-surface-container-high text-primary text-xs font-semibold px-4 py-2 rounded-lg border border-outline-variant/20 transition-colors hover:bg-surface-container-highest"
+                  title="Cruzar experiencias contra InfoObras (Contraloría)"
+                >
+                  <span className="material-symbols-outlined text-base">
+                    domain
+                  </span>
+                  Cruzar InfoObras
+                </a>
+                <a
+                  href={`/herramientas/profesionales?tab=sunat&extraction_job_id=${detail.id}`}
+                  className="inline-flex items-center gap-1.5 bg-surface-container-high text-primary text-xs font-semibold px-4 py-2 rounded-lg border border-outline-variant/20 transition-colors hover:bg-surface-container-highest"
+                  title="Cruzar empresas emisoras contra SUNAT"
+                >
+                  <span className="material-symbols-outlined text-base">
+                    storefront
+                  </span>
+                  Cruzar SUNAT
+                </a>
+              </>
+            )}
           </>
         )}
 
