@@ -36,9 +36,13 @@ export default function JobDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [activeTab, setActiveTab] = useState<"profesionales" | "metricas" | "requisitos" | "factores">(
+  const [activeTab, setActiveTab] = useState<"profesionales" | "metricas" | "requisitos" | "factores" | "logs">(
     "profesionales",
   );
+  const [logFiles, setLogFiles] = useState<{filename: string; size_bytes: number; phase: string | null}[]>([]);
+  const [selectedLogFile, setSelectedLogFile] = useState<string>("job.log");
+  const [logFileContent, setLogFileContent] = useState<string>("");
+  const [logFileLoading, setLogFileLoading] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [logsOpen, setLogsOpen] = useState(false);
   const [evalModalOpen, setEvalModalOpen] = useState(false);
@@ -193,6 +197,58 @@ export default function JobDetailPage({
       if (fallbackInterval) clearInterval(fallbackInterval);
     };
   }, [detail?.status, id, fetchDetail]);
+
+  // ── Cargar lista de archivos de log al activar tab "logs" ───────────────
+  useEffect(() => {
+    if (activeTab !== "logs" || !detail) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/jobs/${detail.id}/logs`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setLogFiles(data.files || []);
+        // Seleccionar job.log por default si existe
+        if ((data.files || []).some((f: { filename: string }) => f.filename === "job.log")) {
+          setSelectedLogFile("job.log");
+        } else if ((data.files || []).length > 0) {
+          setSelectedLogFile(data.files[0].filename);
+        }
+      } catch {
+        // silently ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, detail]);
+
+  // ── Cargar contenido del archivo de log seleccionado ────────────────────
+  useEffect(() => {
+    if (activeTab !== "logs" || !detail || !selectedLogFile) return;
+    let cancelled = false;
+    (async () => {
+      setLogFileLoading(true);
+      try {
+        const res = await fetch(`/api/jobs/${detail.id}/logs/${selectedLogFile}`);
+        if (!res.ok) {
+          setLogFileContent(`Error ${res.status}: archivo no encontrado`);
+          return;
+        }
+        const text = await res.text();
+        if (cancelled) return;
+        setLogFileContent(text);
+      } catch (err) {
+        setLogFileContent(`Error al cargar el archivo: ${err}`);
+      } finally {
+        if (!cancelled) setLogFileLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, detail, selectedLogFile]);
 
   // ── Elapsed timer (only counts from started_at, not queue time) ─────────
   useEffect(() => {
@@ -421,6 +477,12 @@ export default function JobDetailPage({
                 active={activeTab === "factores"}
                 onClick={() => setActiveTab("factores")}
               />
+              <TabButton
+                label="Logs"
+                icon="receipt_long"
+                active={activeTab === "logs"}
+                onClick={() => setActiveTab("logs")}
+              />
             </>
           ) : (
             <>
@@ -435,6 +497,12 @@ export default function JobDetailPage({
                 icon="analytics"
                 active={activeTab === "metricas"}
                 onClick={() => setActiveTab("metricas")}
+              />
+              <TabButton
+                label="Logs"
+                icon="receipt_long"
+                active={activeTab === "logs"}
+                onClick={() => setActiveTab("logs")}
               />
             </>
           )}
@@ -807,6 +875,74 @@ export default function JobDetailPage({
                     </tbody>
                   </table>
                 </div>
+              </section>
+            )}
+
+            {/* ── Logs por fase + bundle ─────────────────────────────────── */}
+            {activeTab === "logs" && (
+              <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+                <div className="px-5 py-4 border-b border-outline-variant/10 flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-lg">
+                      receipt_long
+                    </span>
+                    <h2 className="text-sm font-semibold text-primary">
+                      Logs por fase del pipeline
+                    </h2>
+                    <span className="text-[10px] text-on-surface-variant">
+                      ({logFiles.length} archivos)
+                    </span>
+                  </div>
+                  <a
+                    href={`/api/jobs/${detail.id}/bundle`}
+                    download={`job-${detail.id}-bundle.zip`}
+                    className="inline-flex items-center gap-1.5 bg-fuchsia-50 dark:bg-fuchsia-950/40 text-fuchsia-700 dark:text-fuchsia-300 text-xs font-semibold px-3 py-1.5 rounded-lg border border-fuchsia-200 dark:border-fuchsia-800/50 transition-colors hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/50"
+                  >
+                    <span className="material-symbols-outlined text-base">
+                      folder_zip
+                    </span>
+                    Descargar bundle ZIP
+                  </a>
+                </div>
+
+                {logFiles.length === 0 ? (
+                  <div className="p-12 text-center text-sm text-on-surface-variant">
+                    No hay archivos de log para este job. Si fue procesado antes
+                    de la migración a logs por fase, usa /api/jobs/{detail.id}/log
+                    para ver el log consolidado.
+                  </div>
+                ) : (
+                  <>
+                    {/* Selector de archivo */}
+                    <div className="px-5 py-3 border-b border-outline-variant/10 flex flex-wrap gap-2 bg-surface-container-low">
+                      {logFiles.map((f) => (
+                        <button
+                          key={f.filename}
+                          onClick={() => setSelectedLogFile(f.filename)}
+                          className={
+                            selectedLogFile === f.filename
+                              ? "px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-white"
+                              : "px-3 py-1.5 text-xs font-medium rounded-md bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-primary transition-colors"
+                          }
+                        >
+                          {f.filename}
+                          <span className="ml-1.5 text-[0.625rem] opacity-70">
+                            {(f.size_bytes / 1024).toFixed(1)} KB
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Visor del archivo */}
+                    <div className="bg-slate-900 text-slate-100 text-[11px] font-mono overflow-x-auto max-h-[600px] overflow-y-auto p-4">
+                      {logFileLoading ? (
+                        <div className="text-slate-400">Cargando...</div>
+                      ) : (
+                        <pre className="whitespace-pre-wrap">{logFileContent || "(archivo vacio)"}</pre>
+                      )}
+                    </div>
+                  </>
+                )}
               </section>
             )}
           </>
