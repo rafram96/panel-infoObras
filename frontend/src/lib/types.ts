@@ -30,6 +30,40 @@ export interface ProfesionalExtraccion {
   _needs_review?: boolean;
 }
 
+export interface SenalSimple {
+  severidad: "critica" | "observacion" | "informativa";
+  codigo: string;
+  mensaje: string;
+}
+
+export interface EmpresaSUNATResumen {
+  ruc: string;
+  razon_social: string | null;
+  nombre_comercial: string | null;
+  tipo_contribuyente: string | null;
+  fecha_inscripcion: string | null;
+  fecha_inicio_actividades: string | null;
+  estado: string | null;
+  condicion: string | null;
+  domicilio_fiscal: string | null;
+  actividades_economicas: string[];
+}
+
+export interface CruceSUNATPorExp {
+  ruc_declarado: string | null;
+  ruc_resuelto: string | null;
+  empresa_sunat: EmpresaSUNATResumen | null;
+  score_match_nombre: number | null;
+  candidatos_ambiguos: Array<{
+    ruc: string;
+    razon_social: string;
+    score: number;
+    estado: string | null;
+    ubicacion: string | null;
+  }>;
+  senales: SenalSimple[];
+}
+
 export interface Experiencia {
   proyecto: string | null;
   cargo: string | null;
@@ -44,6 +78,9 @@ export interface Experiencia {
   tipo_obra: string | null;
   tipo_intervencion: string | null;
   tipo_acreditacion: string | null;
+  // Inyectado por _run_full_job tras cruce SUNAT. Puede ser null si el cruce
+  // no se ejecuto (job de extraction sin bases) o si SUNAT fallo.
+  cruce_sunat?: CruceSUNATPorExp | null;
 }
 
 export interface Seccion {
