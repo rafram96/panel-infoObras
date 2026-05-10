@@ -64,6 +64,12 @@ export interface CruceSUNATPorExp {
   senales: SenalSimple[];
 }
 
+export interface AlertaMotor {
+  codigo: string;        // ALT01..ALT11
+  severidad: "critica" | "observacion";
+  mensaje: string;
+}
+
 export interface Experiencia {
   proyecto: string | null;
   cargo: string | null;
@@ -81,6 +87,9 @@ export interface Experiencia {
   // Inyectado por _run_full_job tras cruce SUNAT. Puede ser null si el cruce
   // no se ejecuto (job de extraction sin bases) o si SUNAT fallo.
   cruce_sunat?: CruceSUNATPorExp | null;
+  // Inyectado por _run_full_job tras motor de reglas (Paso 4).
+  // Lista de alertas ALT01..ALT11 que aplican a esta experiencia.
+  alertas_motor?: AlertaMotor[];
 }
 
 export interface Seccion {

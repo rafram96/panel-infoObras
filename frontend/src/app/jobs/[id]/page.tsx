@@ -1530,16 +1530,20 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
   const [open, setOpen] = useState(false);
   const cruce = exp.cruce_sunat;
   const empresa = cruce?.empresa_sunat;
+  const alertasMotor = exp.alertas_motor || [];
 
-  // Badge SUNAT: critica > observacion > informativa > ok > sin cruce
+  // Badge prioritario: ALT11/ALT04 críticas del motor > critica SUNAT >
+  // observacion > OK > sin cruce
+  const alertaMotorCritica = alertasMotor.find((a) => a.severidad === "critica");
   const senalCritica = cruce?.senales?.find((s) => s.severidad === "critica");
   const senalObs = cruce?.senales?.find((s) => s.severidad === "observacion");
+  const alertaMotorObs = alertasMotor.find((a) => a.severidad === "observacion");
   let badge: { icon: string; cls: string; label: string };
-  if (!cruce) {
+  if (alertaMotorCritica) {
     badge = {
-      icon: "horizontal_rule",
-      cls: "text-outline",
-      label: "—",
+      icon: "error",
+      cls: "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300",
+      label: alertaMotorCritica.codigo,
     };
   } else if (senalCritica) {
     badge = {
@@ -1547,13 +1551,25 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
       cls: "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300",
       label: senalCritica.codigo,
     };
+  } else if (alertaMotorObs) {
+    badge = {
+      icon: "warning",
+      cls: "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300",
+      label: alertaMotorObs.codigo,
+    };
   } else if (senalObs) {
     badge = {
       icon: "warning",
       cls: "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300",
       label: senalObs.codigo,
     };
-  } else if (empresa?.razon_social) {
+  } else if (!cruce && alertasMotor.length === 0) {
+    badge = {
+      icon: "horizontal_rule",
+      cls: "text-outline",
+      label: "—",
+    };
+  } else if (empresa?.razon_social || alertasMotor.length === 0) {
     badge = {
       icon: "check_circle",
       cls: "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400",
@@ -1610,7 +1626,32 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
 
       {open && (
         <tr>
-          <td colSpan={5} className="bg-surface-container-low p-4">
+          <td colSpan={5} className="bg-surface-container-low p-4 space-y-3">
+            {/* Alertas del motor de reglas (ALT01-ALT11) — siempre primero
+                porque son las mas graves y aplican a CUALQUIER experiencia */}
+            {alertasMotor.length > 0 && (
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+                  Alertas del motor de reglas ({alertasMotor.length})
+                </div>
+                <div className="space-y-1.5">
+                  {alertasMotor.map((a, ai) => (
+                    <div
+                      key={ai}
+                      className={`text-[11px] leading-snug border-l-2 px-2.5 py-1.5 rounded-r ${senalClass(
+                        a.severidad,
+                      )}`}
+                    >
+                      <span className="font-bold text-[10px] opacity-70 mr-1.5">
+                        {a.codigo}
+                      </span>
+                      {a.mensaje}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {!cruce ? (
               <div className="text-xs text-on-surface-variant italic">
                 Esta experiencia no fue cruzada con SUNAT todavia. Re-corre el
