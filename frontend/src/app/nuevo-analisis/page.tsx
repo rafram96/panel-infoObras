@@ -126,7 +126,13 @@ export default function NuevoAnalisisPage() {
     try {
       const fd = new FormData();
       fd.append("file", propuesta);
-      if (bases) fd.append("bases_file", bases);
+      // Si el usuario sube bases tambien -> job_type=full (pipeline completo:
+      // OCR + extraccion + TDR + cruce SUNAT + evaluacion + Excel).
+      // Si solo sube propuesta -> extraction (solo OCR y extraccion).
+      if (bases) {
+        fd.append("bases_file", bases);
+        fd.append("job_type", "full");
+      }
       if (nombreConcurso) fd.append("nombre_concurso", nombreConcurso);
       if (entidad) fd.append("entidad", entidad);
       if (items) fd.append("items", items);
