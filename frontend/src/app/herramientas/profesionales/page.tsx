@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { Suspense, useState, type FormEvent, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import PanelShell from "@/components/PanelShell";
 
@@ -144,7 +144,33 @@ function scoreColor(score: number | null): string {
 
 type Tab = "infoobras" | "sunat";
 
+// Wrapper con Suspense — requerido por Next.js 15 cuando un componente
+// cliente usa useSearchParams (la pagina deja de ser pre-renderizable
+// estaticamente sin un suspense boundary explicito).
 export default function CrucesProfesionalesPage() {
+  return (
+    <Suspense fallback={<CrucesPageFallback />}>
+      <CrucesProfesionalesPageInner />
+    </Suspense>
+  );
+}
+
+function CrucesPageFallback() {
+  return (
+    <PanelShell title="Verificación Cruzada de Profesionales" subtitle="Herramientas">
+      <div className="max-w-[1400px] mx-auto p-8 lg:p-12">
+        <div className="bg-surface-container-low rounded-xl p-12 text-center">
+          <span className="material-symbols-outlined text-5xl text-outline mb-3 animate-pulse">
+            hourglass_top
+          </span>
+          <p className="text-sm text-on-surface-variant">Cargando...</p>
+        </div>
+      </div>
+    </PanelShell>
+  );
+}
+
+function CrucesProfesionalesPageInner() {
   const searchParams = useSearchParams();
   const initialTab: Tab =
     searchParams.get("tab") === "sunat" ? "sunat" : "infoobras";
