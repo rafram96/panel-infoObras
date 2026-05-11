@@ -70,6 +70,38 @@ export interface AlertaMotor {
   mensaje: string;
 }
 
+// Títulos cortos para cada código de alerta (motor de reglas + señales SUNAT).
+// Se usa en badges y headers donde el código solo no aporta contexto.
+export const ALERT_TITLES: Record<string, string> = {
+  // Motor de reglas (Paso 4)
+  ALT01: "Fecha fin posterior a emisión",
+  ALT02: "Periodo COVID",
+  ALT03: "Experiencia > 25 años",
+  ALT04: "Empresa creada después de la experiencia",
+  ALT05: "Sin fecha de término",
+  ALT06: "Cargo no válido en TDR",
+  ALT07: "Profesión no coincide",
+  ALT08: "Tipo de obra no coincide",
+  ALT09: "Colegiatura no vigente",
+  ALT10: "Experiencia antes de colegiatura",
+  ALT11: "Solapamiento temporal",
+  // Señales SUNAT
+  RUC_DECLARADO_INCORRECTO: "RUC declarado incorrecto",
+  MISMATCH_NOMBRE_RUC: "Nombre ≠ razón social SUNAT",
+  NOMBRE_DIFERENTE: "Nombre parcialmente distinto",
+  AMBIGUO_REQUIERE_HUMANO: "Requiere confirmación humana",
+  RUC_INFERIDO_POR_NOMBRE: "RUC inferido por nombre",
+  EMPRESA_BAJA: "Empresa en BAJA",
+  RUC_NO_ENCONTRADO: "RUC no encontrado en SUNAT",
+  NO_ENCONTRADO_POR_NOMBRE: "Empresa no encontrada",
+  SIN_RUC: "Sin RUC declarado",
+  SIN_DATOS_EMPRESA: "Sin datos de empresa",
+};
+
+export function alertTitle(codigo: string): string {
+  return ALERT_TITLES[codigo] ?? codigo;
+}
+
 export interface Experiencia {
   proyecto: string | null;
   cargo: string | null;

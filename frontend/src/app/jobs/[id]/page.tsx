@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import PanelShell from "@/components/PanelShell";
 import type { Job, JobDetail, Seccion, ExtractionResult, TdrResult, RequisitoPersonal, Experiencia } from "@/lib/types";
+import { alertTitle } from "@/lib/types";
 import {
   STATUS_LABEL,
   STATUS_BADGE,
@@ -1538,48 +1539,58 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
   const senalCritica = cruce?.senales?.find((s) => s.severidad === "critica");
   const senalObs = cruce?.senales?.find((s) => s.severidad === "observacion");
   const alertaMotorObs = alertasMotor.find((a) => a.severidad === "observacion");
-  let badge: { icon: string; cls: string; label: string };
+  // Contar todas las alertas (motor + sunat) para mostrar total
+  const totalAlertas = alertasMotor.length + (cruce?.senales?.length ?? 0);
+
+  let badge: { icon: string; cls: string; code: string; title: string };
   if (alertaMotorCritica) {
     badge = {
       icon: "error",
       cls: "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300",
-      label: alertaMotorCritica.codigo,
+      code: alertaMotorCritica.codigo,
+      title: alertTitle(alertaMotorCritica.codigo),
     };
   } else if (senalCritica) {
     badge = {
       icon: "error",
       cls: "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300",
-      label: senalCritica.codigo,
+      code: senalCritica.codigo,
+      title: alertTitle(senalCritica.codigo),
     };
   } else if (alertaMotorObs) {
     badge = {
       icon: "warning",
       cls: "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300",
-      label: alertaMotorObs.codigo,
+      code: alertaMotorObs.codigo,
+      title: alertTitle(alertaMotorObs.codigo),
     };
   } else if (senalObs) {
     badge = {
       icon: "warning",
       cls: "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300",
-      label: senalObs.codigo,
+      code: senalObs.codigo,
+      title: alertTitle(senalObs.codigo),
     };
   } else if (!cruce && alertasMotor.length === 0) {
     badge = {
       icon: "horizontal_rule",
       cls: "text-outline",
-      label: "—",
+      code: "",
+      title: "Sin verificación",
     };
   } else if (empresa?.razon_social || alertasMotor.length === 0) {
     badge = {
       icon: "check_circle",
       cls: "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400",
-      label: "OK",
+      code: "",
+      title: "Sin alertas",
     };
   } else {
     badge = {
       icon: "help",
       cls: "bg-slate-100 dark:bg-slate-800 text-slate-500",
-      label: "sin datos",
+      code: "",
+      title: "Sin datos",
     };
   }
 
@@ -1607,12 +1618,21 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
         </td>
         <td className="px-3 py-1.5 whitespace-nowrap">
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${badge.cls}`}
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] ${badge.cls}`}
+            title={badge.code ? `${badge.code} — ${badge.title}` : badge.title}
           >
             <span className="material-symbols-outlined text-xs">
               {badge.icon}
             </span>
-            {badge.label}
+            {badge.code && (
+              <span className="font-bold tracking-wide">{badge.code}</span>
+            )}
+            <span className={badge.code ? "opacity-90" : "font-semibold"}>
+              {badge.title}
+            </span>
+            {totalAlertas > 1 && (
+              <span className="ml-0.5 opacity-60">(+{totalAlertas - 1})</span>
+            )}
             <span
               className={`material-symbols-outlined text-xs transition-transform ${
                 open ? "rotate-180" : ""
@@ -1642,10 +1662,16 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
                         a.severidad,
                       )}`}
                     >
-                      <span className="font-bold text-[10px] opacity-70 mr-1.5">
-                        {a.codigo}
-                      </span>
-                      {a.mensaje}
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="font-bold text-[10px] opacity-90 font-mono">
+                          {a.codigo}
+                        </span>
+                        <span className="text-[10px] opacity-70">·</span>
+                        <span className="font-semibold text-[10px]">
+                          {alertTitle(a.codigo)}
+                        </span>
+                      </div>
+                      <div className="opacity-90">{a.mensaje}</div>
                     </div>
                   ))}
                 </div>
@@ -1772,10 +1798,16 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
                             s.severidad,
                           )}`}
                         >
-                          <span className="font-bold text-[10px] opacity-70 mr-1.5">
-                            {s.codigo}
-                          </span>
-                          {s.mensaje}
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="font-bold text-[10px] opacity-90 font-mono">
+                              {s.codigo}
+                            </span>
+                            <span className="text-[10px] opacity-70">·</span>
+                            <span className="font-semibold text-[10px]">
+                              {alertTitle(s.codigo)}
+                            </span>
+                          </div>
+                          <div className="opacity-90">{s.mensaje}</div>
                         </div>
                       ))}
                     </div>
