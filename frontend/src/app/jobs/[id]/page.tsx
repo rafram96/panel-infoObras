@@ -403,6 +403,21 @@ export default function JobDetailPage({
               </a>
             )}
 
+            {/* Descargar result.json — para comparar runs (tool vs pipeline).
+                El JSON trae el bloque _diagnostic con huellas del PDF, .md,
+                estado Ollama y env vars para ubicar dónde diverge el output. */}
+            <a
+              href={`/api/jobs/${id}/result.json`}
+              download
+              title="Descarga el result completo como .json (incluye _diagnostic para comparar runs)"
+              className="inline-flex items-center gap-1.5 bg-surface-container-high text-primary text-xs font-semibold px-4 py-2 rounded-lg border border-outline-variant/20 transition-colors hover:bg-surface-container-highest"
+            >
+              <span className="material-symbols-outlined text-base">
+                data_object
+              </span>
+              Descargar JSON
+            </a>
+
             {/* Evaluar RTM — solo para jobs extraction (para generar Excel).
                 Si ya existe Excel, permite re-evaluar con otro TDR. */}
             {detail.job_type === "extraction" && (
