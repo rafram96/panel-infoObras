@@ -70,7 +70,7 @@ export default function ConcursosPage() {
   const totalPendientes = concursos.reduce((s, c) => s + c.pendientes, 0);
 
   return (
-    <PanelShell title="Concursos" subtitle="Flujo pivote — Claude evalúa en la PC del ingeniero, el backend verifica">
+    <PanelShell title="Concursos" subtitle="Claude evalúa las propuestas; el sistema las verifica con SUNAT e InfoObras">
       {/* métricas */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <MetricCard icon="gavel" label="Concursos" value={cargando ? "…" : String(concursos.length)} />

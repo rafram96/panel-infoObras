@@ -77,7 +77,7 @@ function Zona({
         )}
         {estado?.ok && estado.resumen && (
           <p className="mt-2 text-[0.6875rem] text-green-700 dark:text-green-300 font-semibold">
-            ✓ espejo válido · {estado.resumen}
+            ✓ archivo correcto · {estado.resumen}
           </p>
         )}
       </div>
@@ -120,7 +120,7 @@ export default function NuevoAnalisisPivote({ params }: { params: Promise<{ id: 
   };
 
   return (
-    <PanelShell title="Analizar postor" subtitle="Sube el Excel y el JSON espejo que produjo la skill">
+    <PanelShell title="Analizar postor" subtitle="Sube el Excel y el archivo de datos que generó Claude">
       <div className="max-w-3xl">
         <Link href={`/concursos/${id}`} className="text-[0.75rem] text-on-surface-variant hover:text-primary flex items-center gap-1 mb-6">
           <span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver al concurso
@@ -129,23 +129,23 @@ export default function NuevoAnalisisPivote({ params }: { params: Promise<{ id: 
         <div className="mb-5 bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 px-5 py-3.5 flex items-center gap-3">
           <span className="material-symbols-outlined text-primary text-xl">bolt</span>
           <p className="text-xs text-outline leading-relaxed">
-            Normalmente <b className="text-primary">no necesitas esta pantalla</b>: el MCP local sube el
-            análisis directo desde la sesión de Claude del ingeniero. Esta es la vía manual (Camino B).
+            Normalmente <b className="text-primary">no necesitas esta pantalla</b>: los análisis llegan solos
+            desde Claude. Esta es la vía manual, por si acaso.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
           <Zona
             label="Excel — Formato de Evaluación"
-            hint="el .xlsx que generó la skill (hoja CLAUDE)"
+            hint="el .xlsx que generó Claude"
             icon="table_view"
             acepta={(f) => f.name.endsWith(".xlsx") || f.name.endsWith(".xlsm")}
             zona={excel}
             onFile={(f) => setExcel({ file: f })}
           />
           <Zona
-            label="JSON espejo (contrato v1.2.0)"
-            hint="se valida aquí mismo al soltarlo, antes de subir"
+            label="Archivo de datos (JSON)"
+            hint="lo genera Claude junto con el Excel; se revisa al instante"
             icon="data_object"
             acepta={(f) => f.name.endsWith(".json")}
             zona={espejo}
@@ -157,7 +157,7 @@ export default function NuevoAnalisisPivote({ params }: { params: Promise<{ id: 
         {espejo.validacion && !espejo.validacion.ok && (
           <div className="mt-5 p-4 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900">
             <p className="text-[0.8125rem] font-bold text-red-700 dark:text-red-300 mb-2">
-              El espejo NO pasa el contrato ({espejo.validacion.errores.length} error{espejo.validacion.errores.length > 1 ? "es" : ""}):
+              El archivo de datos tiene {espejo.validacion.errores.length} error{espejo.validacion.errores.length > 1 ? "es" : ""}:
             </p>
             <ul className="space-y-1 max-h-64 overflow-y-auto">
               {espejo.validacion.errores.slice(0, 30).map((e, i) => (
@@ -167,7 +167,7 @@ export default function NuevoAnalisisPivote({ params }: { params: Promise<{ id: 
               ))}
             </ul>
             <p className="mt-2 text-[0.6875rem] text-red-600 dark:text-red-400">
-              Corrige el espejo en la skill (o re-lanza el subagente responsable) y vuelve a soltarlo.
+              Vuelve a generarlo en Claude y súbelo de nuevo.
             </p>
           </div>
         )}
@@ -188,8 +188,8 @@ export default function NuevoAnalisisPivote({ params }: { params: Promise<{ id: 
         </button>
 
         <p className="mt-3 text-[0.6875rem] text-on-surface-variant">
-          El backend re-valida el espejo en la etapa de ingesta y corre el pipeline:
-          validación (15 NOTAS) → CUI → InfoObras ∥ SUNAT → reglas → Excel final.
+          Al recibirlo, el sistema revisa el archivo y verifica todo contra SUNAT
+          e InfoObras antes de generar el Excel final.
         </p>
       </div>
     </PanelShell>

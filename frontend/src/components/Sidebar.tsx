@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_MAIN = [
-  { href: "/concursos", icon: "gavel", label: "Concursos (Pivote)" },
+  { href: "/concursos", icon: "gavel", label: "Concursos" },
   { href: "/", icon: "dashboard", label: "Dashboard" },
   { href: "/nuevo-analisis", icon: "query_stats", label: "Nuevo Análisis" },
   { href: "/historial", icon: "manage_search", label: "Historial" },

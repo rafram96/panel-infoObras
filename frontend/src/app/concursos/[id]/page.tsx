@@ -96,9 +96,9 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
       <div className="mb-6 bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 px-5 py-3.5 flex items-center gap-3">
         <span className="material-symbols-outlined text-primary text-xl">bolt</span>
         <p className="text-xs text-outline leading-relaxed">
-          Los análisis llegan <b className="text-primary">automáticamente vía MCP</b> cuando el ingeniero
-          corre la skill en su sesión de Claude — esta vista se actualiza sola.
-          El botón de subida manual es la alternativa (Camino B).
+          Los análisis llegan <b className="text-primary">solos desde Claude</b> cuando se evalúa
+          una propuesta — esta vista se actualiza automáticamente.
+          El botón de subida manual es solo la alternativa.
         </p>
         <span className="ml-auto flex items-center gap-1.5 text-[0.6875rem] font-semibold text-green-600 whitespace-nowrap">
           <span className="relative flex h-2 w-2">
@@ -147,7 +147,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                       <td className="px-5 py-3">
                         {j.origen === "mcp" ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary text-[0.6875rem] font-semibold">
-                            <span className="material-symbols-outlined text-[13px]">bolt</span> MCP
+                            <span className="material-symbols-outlined text-[13px]">bolt</span> Claude
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-outline text-[0.6875rem] font-semibold">

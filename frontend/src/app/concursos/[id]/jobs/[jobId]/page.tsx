@@ -23,10 +23,10 @@ const ETAPA_UI: Record<string, { icon: string; circulo: string; texto: string }>
 };
 
 const ESTADO_ETAPA_LABEL: Record<string, string> = {
-  ok: "Completada",
-  ok_con_revision: "Completada · dejó items a revisión",
-  error_parcial: "Completada con errores parciales — el resto continuó",
-  error: "Falló (estructural)",
+  ok: "Completado",
+  ok_con_revision: "Completado · necesita tu revisión",
+  error_parcial: "Completado con algunos errores — el resto continuó",
+  error: "Falló",
   en_curso: "En curso…",
   pendiente: "Pendiente",
 };
@@ -142,7 +142,7 @@ function FilaEtapa({ res, nombre, abierta, onToggle }: {
           {res.observaciones.length > 0 && (
             <div className="mt-3 space-y-2">
               <p className="text-[0.625rem] font-bold uppercase tracking-wide text-slate-500">
-                Observaciones de la etapa
+                Observaciones de este paso
               </p>
               {res.observaciones.map((o: Observacion, i) => {
                 const sui = SEVERIDAD_UI[o.severidad];
@@ -472,8 +472,8 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
         <span className={`px-2.5 py-0.5 rounded text-[0.6875rem] font-semibold ${ui.cls}`}>{ui.label}</span>
         {job.origen === "mcp" && (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-primary/10 text-primary text-[0.6875rem] font-semibold"
-            title="Creado automáticamente por el MCP local desde la sesión de Claude del ingeniero">
-            <span className="material-symbols-outlined text-[14px]">bolt</span> vía MCP
+            title="Llegó automáticamente desde la sesión de Claude">
+            <span className="material-symbols-outlined text-[14px]">bolt</span> desde Claude
           </span>
         )}
         <span className="text-xs font-mono text-outline">{job.analisis_id}</span>
@@ -481,7 +481,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
 
       {/* métricas */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricCard icon="conveyor_belt" label="Pipeline" value={`${completas}/${ETAPAS_ORDEN.length}`} />
+        <MetricCard icon="conveyor_belt" label="Pasos" value={`${completas}/${ETAPAS_ORDEN.length}`} />
         <MetricCard icon="speed" label="Progreso" value={`${pct}%`} />
         <MetricCard
           icon="notification_important" label="Alertas"
@@ -505,7 +505,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
             {portalesCaidos.map((p) => (
               <p key={p.portal}>
                 <b>{p.portal.toUpperCase()}</b> no responde{p.diagnostico ? ` (${p.diagnostico})` : ""} —
-                las experiencias de esa rama quedan en espera, el resto del pipeline continúa.
+                esas consultas quedan en espera; el resto de la verificación continúa.
               </p>
             ))}
           </div>
@@ -535,9 +535,9 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
           <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
             <span className="material-symbols-outlined text-xl">conveyor_belt</span>
-            Pipeline del backend
+            Pasos de la verificación
           </h2>
-          <span className="text-[0.6875rem] text-outline">clic en una etapa para ver su detalle</span>
+          <span className="text-[0.6875rem] text-outline">haz clic en un paso para ver el detalle</span>
         </div>
         <div className="p-3">
           {previas.map((nombre) => (
@@ -549,7 +549,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
           <div className="my-1 ml-4 pl-3 border-l-2 border-dashed border-primary/30 relative">
             <span className="absolute -left-[1px] -top-1 -translate-x-full pr-2 text-[0.625rem] font-bold uppercase tracking-wide text-primary/60 select-none hidden sm:block" />
             <p className="px-3 pt-1 text-[0.625rem] font-bold uppercase tracking-[0.1rem] text-primary/60">
-              Ramas en paralelo
+              Consultas simultáneas
             </p>
             {rama.map((nombre) => (
               <FilaEtapa key={nombre} nombre={ETAPA_LABEL[nombre]} res={porEtapa.get(nombre)}
@@ -602,8 +602,8 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
               <h3 className="text-sm font-semibold">Excel final enriquecido</h3>
             </div>
             <p className="text-xs text-outline leading-relaxed">
-              Formato de Evaluación regenerado por el backend: hoja CLAUDE + hojas por
-              profesional con días efectivos. Amarillo = Claude · naranja = backend.
+              El Formato de Evaluación completo: la evaluación de Claude, la Base de Datos y
+              una hoja por profesional con sus días efectivos. Amarillo = Claude · naranja = verificado.
             </p>
             {job.excel_final ? (
               <a href={job.excel_final} download
@@ -622,7 +622,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
             </div>
             <p className="text-xs text-outline leading-relaxed">
               Los documentos oficiales de cada obra (cronogramas, valorizaciones, expediente)
-              en árbol Proyecto → Profesional → Experiencia — la base del análisis humano.
+              en carpetas por profesional y experiencia — para revisarlos tú mismo.
             </p>
             {job.zip_infoobras ? (
               <a href={job.zip_infoobras} download
@@ -641,8 +641,8 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
             </div>
             <p className="text-xs text-outline leading-relaxed">
               {pend > 0
-                ? `${pend} experiencia${pend > 1 ? "s" : ""} esperan tu decisión (CUI, firmantes). Resolverlas re-dispara solo esa experiencia.`
-                : "Sin pendientes — todo lo verificable se resolvió automáticamente."}
+                ? `${pend} experiencia${pend > 1 ? "s" : ""} esperan tu decisión (obras por identificar, firmantes). Al resolverlas se verifica de nuevo solo esa experiencia.`
+                : "Sin pendientes — todo se verificó automáticamente."}
             </p>
             {pend > 0 ? (
               <Link href={`/concursos/${id}/jobs/${jobId}/revision`}
@@ -666,7 +666,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
               <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
                 <span className="material-symbols-outlined text-xl">gavel</span>
-                Veredictos — Claude evalúa, el backend verifica
+                Veredictos — lo que evaluó Claude y lo que verificó el sistema
               </h2>
               {resumen.puntaje_total != null && (
                 <span className="text-xs text-outline">
@@ -690,11 +690,11 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
                       <span className="material-symbols-outlined text-base text-outline">trending_flat</span>
                       {invertido ? (
                         <span className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-[0.75rem] font-bold">
-                          Backend · {v.cumple_backend}
+                          Verificado · {v.cumple_backend}
                         </span>
                       ) : (
                         <span className="px-2.5 py-1 rounded-lg bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200 text-[0.75rem] font-semibold">
-                          Backend · confirma{v.anios_efectivos != null ? ` (${v.anios_efectivos} años efectivos)` : ""}
+                          Verificado · confirma{v.anios_efectivos != null ? ` (${v.anios_efectivos} años efectivos)` : ""}
                         </span>
                       )}
                     </div>

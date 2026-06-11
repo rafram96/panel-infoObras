@@ -26,7 +26,7 @@ function TarjetaItem({
           prof {item.n_prof} · exp {item.n_exp}
         </span>
         <span className="text-[0.6875rem] text-on-surface-variant uppercase tracking-wide">
-          etapa: {ETAPA_LABEL[item.etapa]}
+          paso: {ETAPA_LABEL[item.etapa]}
         </span>
       </div>
       <p className="text-[0.875rem] font-semibold">{item.profesional ?? `Profesional ${item.n_prof}`}
@@ -122,7 +122,7 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
       setMensaje(
         dato.accion === "no_existe"
           ? `prof ${item.n_prof} exp ${item.n_exp}: marcada como inexistente — quedó documentado.`
-          : `prof ${item.n_prof} exp ${item.n_exp}: re-disparada con CUI ${dato.cui} (InfoObras → reglas → Excel).`,
+          : `prof ${item.n_prof} exp ${item.n_exp}: resuelta con CUI ${dato.cui} — el sistema la está verificando de nuevo y el Excel se actualizará.`,
       );
     } else {
       const e = await r.json().catch(() => ({}));
@@ -139,7 +139,7 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
   return (
     <PanelShell
       title="Cola de revisión"
-      subtitle={`${job.postor ?? job.analisis_id} — lo que el sistema no pudo resolver solo`}
+      subtitle={`${job.postor ?? job.analisis_id} — lo que necesita tu decisión`}
     >
       <div className="max-w-3xl">
         <Link href={`/concursos/${id}/jobs/${jobId}`} className="text-[0.75rem] text-on-surface-variant hover:text-primary flex items-center gap-1 mb-6">
@@ -157,7 +157,7 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
             <span className="material-symbols-outlined text-green-600 text-4xl">task_alt</span>
             <p className="mt-2 text-[0.9375rem] font-bold text-primary">Cola limpia</p>
             <p className="text-[0.8125rem] text-on-surface-variant mt-1">
-              Todo resuelto. El backend re-corrió las experiencias afectadas y el Excel final está regenerado.
+              Todo resuelto. El sistema volvió a verificar las experiencias y el Excel final ya está actualizado.
             </p>
             <Link
               href={`/concursos/${id}/jobs/${jobId}`}
@@ -170,7 +170,7 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
           <>
             <p className="mb-4 text-[0.8125rem] text-on-surface-variant">
               <b className="text-amber-700 dark:text-amber-300">{pendientes.length}</b> item{pendientes.length > 1 ? "s" : ""} esperando tu decisión.
-              Cada resolución re-dispara <b>solo esa experiencia</b> aguas abajo — el resto del job no se toca.
+              Al resolver cada una, el sistema vuelve a verificar <b>solo esa experiencia</b> — el resto no se toca.
             </p>
             <div className="space-y-4">
               {pendientes.map((item) => (

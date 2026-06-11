@@ -19,14 +19,14 @@ export const ETAPAS_ORDEN: Etapa[] = [
 ];
 
 export const ETAPA_LABEL: Record<Etapa, string> = {
-  ingesta: "Ingesta",
-  validacion: "Validación (15 NOTAS)",
-  resolucion_cui: "Resolución de CUI",
-  infoobras: "InfoObras",
-  sunat: "SUNAT",
-  reglas: "Reglas (Paso 5)",
+  ingesta: "Recepción del análisis",
+  validacion: "Revisión de consistencia (15 reglas)",
+  resolucion_cui: "Identificación de obras (CUI)",
+  infoobras: "Consulta a InfoObras",
+  sunat: "Consulta a SUNAT",
+  reglas: "Cálculo de días efectivos",
   excel: "Excel final",
-  persistencia: "Persistencia",
+  persistencia: "Guardado",
 };
 
 export type JobEstado =
