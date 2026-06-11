@@ -186,3 +186,20 @@ export const SEVERIDAD_UI: Record<Severidad, { label: string; cls: string; orden
 export function pendientesHumano(job: PivoteJob): number {
   return job.items_revision.filter((it) => !it.resuelto).length;
 }
+
+/** Presentación de fechas (pedido del cliente): DD/MM/YY.
+ *  El ISO vive solo en el contrato; sentinels/parciales se muestran tal cual. */
+export function fmtFecha(v?: string | null): string {
+  if (!v) return "—";
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  return m ? `${m[3]}/${m[2]}/${m[1].slice(2)}` : v;
+}
+
+/** Reemplaza TODAS las fechas ISO dentro de un texto por DD/MM/YY
+ *  (para campos compuestos tipo "2021-03-01 → 2022-08-15"). */
+export function fmtFechasEnTexto(s?: string | null): string {
+  return (s ?? "").replace(
+    /(\d{4})-(\d{2})-(\d{2})/g,
+    (_t, a: string, m: string, d: string) => `${d}/${m}/${a.slice(2)}`,
+  );
+}

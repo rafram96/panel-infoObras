@@ -7,7 +7,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
 import type { ItemRevision, PivoteJob } from "@/lib/pivote/types";
-import { ETAPA_LABEL, pendientesHumano } from "@/lib/pivote/types";
+import { ETAPA_LABEL, fmtFechasEnTexto, pendientesHumano } from "@/lib/pivote/types";
 
 function TarjetaItem({
   item, onResolver, ocupado,
@@ -33,7 +33,7 @@ function TarjetaItem({
         {item.cargo && <span className="font-normal text-on-surface-variant"> — {item.cargo}</span>}
       </p>
       {item.proyecto && <p className="text-[0.8125rem] mt-0.5">{item.proyecto}</p>}
-      {item.fechas && <p className="text-[0.6875rem] text-on-surface-variant">{item.fechas}</p>}
+      {item.fechas && <p className="text-[0.6875rem] text-on-surface-variant">{fmtFechasEnTexto(item.fechas)}</p>}
       <p className="mt-2 text-[0.8125rem] text-amber-800 dark:text-amber-300">
         <span className="material-symbols-outlined text-[16px] align-text-bottom mr-1">help</span>
         {item.motivo}

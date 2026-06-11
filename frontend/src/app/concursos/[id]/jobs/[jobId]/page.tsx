@@ -9,7 +9,7 @@ import PanelShell from "@/components/PanelShell";
 import {
   type AlertaResumen, type Observacion, type PivoteJob, type ResultadoEtapa,
   type ResumenAnalisis, type SaludPortal,
-  ETAPA_LABEL, ETAPAS_ORDEN, JOB_ESTADO_UI, SEVERIDAD_UI, pendientesHumano,
+  ETAPA_LABEL, ETAPAS_ORDEN, JOB_ESTADO_UI, SEVERIDAD_UI, fmtFecha, pendientesHumano,
 } from "@/lib/pivote/types";
 
 // ── presentación por estado de etapa ─────────────────────────────────────────
@@ -283,7 +283,7 @@ function FilaProfesional({ prof }: { prof: ProfBreve }) {
                           </td>
                           <td className="px-3 py-2 text-secondary">{e.cargo_ocupado}</td>
                           <td className="px-3 py-2 text-secondary whitespace-nowrap">
-                            {e.fecha_inicial} → {e.fecha_final}
+                            {fmtFecha(e.fecha_inicial)} → {fmtFecha(e.fecha_final)}
                           </td>
                           <td className="px-3 py-2 text-right tabular-nums text-on-surface">{e.dias ?? "—"}</td>
                           <td className="px-3 py-2">
