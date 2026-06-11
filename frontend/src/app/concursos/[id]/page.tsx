@@ -1,6 +1,7 @@
 "use client";
 
-/** Expediente de UN concurso: sus postores (jobs) + P6 comparador. */
+/** Expediente de UN concurso: métricas, cuadro comparativo de postores (P6)
+ *  y auto-refresh — los análisis creados por el MCP aparecen solos. */
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
@@ -8,6 +9,23 @@ import {
   type ConcursoConJobs, type PivoteJob,
   ETAPAS_ORDEN, JOB_ESTADO_UI, pendientesHumano,
 } from "@/lib/pivote/types";
+
+function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
+  icon: string; label: string; value: string; accent?: "rojo" | "ambar"; borde?: string;
+}) {
+  const color = accent === "rojo" ? "text-red-600" : accent === "ambar" ? "text-amber-600" : "text-primary";
+  return (
+    <div className={`bg-surface-container-lowest p-4 border-l-4 ${borde} shadow-ambient rounded-xl flex items-start gap-4`}>
+      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+        <span className={`material-symbols-outlined text-xl ${color}`}>{icon}</span>
+      </div>
+      <div>
+        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
+        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function ExpedienteConcurso({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -20,22 +38,15 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
     setData(await r.json());
   }, [id]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  // auto-refresh: el MCP crea análisis sin pasar por el panel
+  useEffect(() => {
+    cargar();
+    const t = setInterval(cargar, 6000);
+    return () => clearInterval(t);
+  }, [cargar]);
 
-  if (error) {
-    return (
-      <PanelShell title="Concurso">
-        <p className="text-[0.8125rem] text-red-600">{error}</p>
-      </PanelShell>
-    );
-  }
-  if (!data) {
-    return (
-      <PanelShell title="Concurso">
-        <p className="text-[0.8125rem] text-on-surface-variant">Cargando…</p>
-      </PanelShell>
-    );
-  }
+  if (error) return <PanelShell title="Concurso"><p className="text-sm text-red-600">{error}</p></PanelShell>;
+  if (!data) return <PanelShell title="Concurso"><p className="text-sm text-outline">Cargando…</p></PanelShell>;
 
   const etapasOk = (j: PivoteJob) =>
     j.etapas.filter((e) => ["ok", "ok_con_revision", "error_parcial"].includes(e.estado)).length;
@@ -47,111 +58,158 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
     };
   };
 
+  const completados = data.jobs.filter((j) => j.estado === "completado").length;
+  const pendTotal = data.jobs.reduce((s, j) => s + pendientesHumano(j), 0);
+  const criticasTotal = data.jobs.reduce((s, j) => s + alertasJob(j).criticas, 0);
+
   return (
     <PanelShell title={data.nomenclatura} subtitle={data.entidad ?? undefined}>
-      <div className="max-w-6xl">
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <Link href="/concursos" className="text-[0.75rem] text-on-surface-variant hover:text-primary flex items-center gap-1">
-            <span className="material-symbols-outlined text-[16px]">arrow_back</span> Concursos
-          </Link>
-          <div className="flex-1" />
-          <Link
-            href={`/concursos/${id}/nuevo`}
-            className="h-10 px-4 rounded-lg bg-primary text-on-primary text-[0.8125rem] font-semibold flex items-center gap-2 hover:opacity-90"
-          >
-            <span className="material-symbols-outlined text-[18px]">upload_file</span>
-            Analizar postor (Excel + espejo)
-          </Link>
+      {/* barra superior */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <Link href="/concursos" className="inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
+          <span className="material-symbols-outlined text-base">arrow_back</span> Concursos
+        </Link>
+        {data.fecha_presentacion && (
+          <span className="text-xs text-outline">Presentación: {data.fecha_presentacion}</span>
+        )}
+        <div className="flex-1" />
+        <Link
+          href={`/concursos/${id}/nuevo`}
+          className="inline-flex items-center gap-1.5 primary-gradient text-white text-xs font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90"
+        >
+          <span className="material-symbols-outlined text-base">upload_file</span>
+          Subir análisis manual
+        </Link>
+      </div>
+
+      {/* métricas del expediente */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <MetricCard icon="groups" label="Postores" value={String(data.jobs.length)} />
+        <MetricCard icon="task_alt" label="Completados" value={String(completados)} />
+        <MetricCard icon="pending_actions" label="A revisión" value={String(pendTotal)}
+          accent={pendTotal > 0 ? "ambar" : undefined} borde={pendTotal > 0 ? "border-amber-500" : "border-primary"} />
+        <MetricCard icon="notification_important" label="Alertas críticas" value={String(criticasTotal)}
+          accent={criticasTotal > 0 ? "rojo" : undefined} borde={criticasTotal > 0 ? "border-red-500" : "border-primary"} />
+      </section>
+
+      {/* aviso flujo MCP */}
+      <div className="mb-6 bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 px-5 py-3.5 flex items-center gap-3">
+        <span className="material-symbols-outlined text-primary text-xl">bolt</span>
+        <p className="text-xs text-outline leading-relaxed">
+          Los análisis llegan <b className="text-primary">automáticamente vía MCP</b> cuando el ingeniero
+          corre la skill en su sesión de Claude — esta vista se actualiza sola.
+          El botón de subida manual es la alternativa (Camino B).
+        </p>
+        <span className="ml-auto flex items-center gap-1.5 text-[0.6875rem] font-semibold text-green-600 whitespace-nowrap">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          </span>
+          en vivo
+        </span>
+      </div>
+
+      {/* P6 · cuadro comparativo */}
+      <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
+          <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
+            <span className="material-symbols-outlined text-xl">compare_arrows</span>
+            Cuadro comparativo de postores
+          </h2>
         </div>
 
-        {/* P6 · Comparador de postores */}
-        <section className="rounded-lg bg-surface-container-lowest border border-outline-variant/20 overflow-hidden">
-          <div className="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[20px]">compare_arrows</span>
-            <h2 className="text-[0.875rem] font-bold text-primary">Cuadro comparativo de postores</h2>
+        {data.jobs.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-outline">
+            Aún no hay postores analizados en este concurso.
           </div>
-
-          {data.jobs.length === 0 ? (
-            <p className="p-5 text-[0.8125rem] text-on-surface-variant">
-              Aún no hay postores analizados en este concurso.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-[0.8125rem]">
-                <thead>
-                  <tr className="text-left text-[0.6875rem] uppercase tracking-wide text-on-surface-variant border-b border-outline-variant/20">
-                    <th className="px-5 py-3 font-bold">Postor</th>
-                    <th className="px-4 py-3 font-bold">Estado</th>
-                    <th className="px-4 py-3 font-bold">Pipeline</th>
-                    <th className="px-4 py-3 font-bold">Alertas</th>
-                    <th className="px-4 py-3 font-bold">A revisión</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.jobs.map((j) => {
-                    const ui = JOB_ESTADO_UI[j.estado];
-                    const al = alertasJob(j);
-                    const pend = pendientesHumano(j);
-                    return (
-                      <tr key={j.job_id} className="border-b border-outline-variant/10 hover:bg-surface-container-high/40">
-                        <td className="px-5 py-3">
-                          <p className="font-semibold">{j.postor ?? j.analisis_id}</p>
-                          <p className="text-[0.6875rem] text-on-surface-variant">{j.analisis_id}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[0.6875rem] font-bold ${ui.cls}`}>{ui.label}</span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-on-surface-variant">
-                          {etapasOk(j)}/{ETAPAS_ORDEN.length} etapas
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {al.criticas > 0 && (
-                            <span className="mr-1 px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 text-[0.6875rem] font-bold">
-                              {al.criticas} crítica{al.criticas > 1 ? "s" : ""}
-                            </span>
-                          )}
-                          {al.alertas > 0 && (
-                            <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 text-[0.6875rem] font-bold">
-                              {al.alertas}
-                            </span>
-                          )}
-                          {al.criticas === 0 && al.alertas === 0 && <span className="text-on-surface-variant">—</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {pend > 0 ? (
-                            <Link
-                              href={`/concursos/${id}/jobs/${j.job_id}/revision`}
-                              className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-[0.6875rem] font-bold hover:underline"
-                            >
-                              {pend} pendiente{pend > 1 ? "s" : ""}
-                            </Link>
-                          ) : (
-                            <span className="text-on-surface-variant">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Link
-                            href={`/concursos/${id}/jobs/${j.job_id}`}
-                            className="text-primary text-[0.75rem] font-semibold hover:underline"
-                          >
-                            Ver análisis →
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-surface-container-high">
+                <tr>
+                  {["Postor", "Origen", "Estado", "Pipeline", "Alertas", "A revisión", "Acciones"].map((h) => (
+                    <th key={h} className="px-5 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/10">
+                {data.jobs.map((j) => {
+                  const ui = JOB_ESTADO_UI[j.estado];
+                  const al = alertasJob(j);
+                  const pend = pendientesHumano(j);
+                  const ok = etapasOk(j);
+                  return (
+                    <tr key={j.job_id} className="hover:bg-surface-container-high/40 transition-colors">
+                      <td className="px-5 py-3">
+                        <p className="text-sm text-primary font-medium truncate max-w-[260px]">{j.postor ?? j.analisis_id}</p>
+                        <p className="text-[0.6875rem] font-mono text-outline">{j.analisis_id}</p>
+                      </td>
+                      <td className="px-5 py-3">
+                        {j.origen === "mcp" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary text-[0.6875rem] font-semibold">
+                            <span className="material-symbols-outlined text-[13px]">bolt</span> MCP
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-outline text-[0.6875rem] font-semibold">
+                            <span className="material-symbols-outlined text-[13px]">upload_file</span> manual
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-block px-2.5 py-0.5 rounded text-[0.6875rem] font-semibold ${ui.cls}`}>{ui.label}</span>
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${(ok / ETAPAS_ORDEN.length) * 100}%` }} />
+                          </div>
+                          <span className="text-[0.6875rem] text-outline">{ok}/{ETAPAS_ORDEN.length}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        {al.criticas > 0 && (
+                          <span className="mr-1 px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 text-[0.6875rem] font-bold">
+                            {al.criticas} crít.
+                          </span>
+                        )}
+                        {al.alertas > 0 && (
+                          <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 text-[0.6875rem] font-bold">
+                            {al.alertas}
+                          </span>
+                        )}
+                        {al.criticas === 0 && al.alertas === 0 && <span className="text-xs text-outline">—</span>}
+                      </td>
+                      <td className="px-5 py-3">
+                        {pend > 0 ? (
+                          <Link href={`/concursos/${id}/jobs/${j.job_id}/revision`}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-[0.6875rem] font-bold hover:underline">
+                            <span className="material-symbols-outlined text-[13px]">pending_actions</span>
+                            {pend}
                           </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <p className="mt-4 text-[0.6875rem] text-on-surface-variant">
-          El puntaje técnico comparado por postor aparece en el resumen de cada análisis;
-          la exportación consolidada del expediente es de fase 2.
-        </p>
-      </div>
+                        ) : (
+                          <span className="text-xs text-outline">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        <Link href={`/concursos/${id}/jobs/${j.job_id}`}
+                          className="inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
+                          <span className="material-symbols-outlined text-base">visibility</span> Ver
+                        </Link>
+                        {j.excel_final && (
+                          <a href={j.excel_final} download
+                            className="ml-3 inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
+                            <span className="material-symbols-outlined text-base">download</span> Excel
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </PanelShell>
   );
 }

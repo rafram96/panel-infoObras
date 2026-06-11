@@ -63,6 +63,7 @@ const jobA: PivoteJob = {
   concurso_id: "c-demo-1",
   concurso: "CP-02-2026/GOB.REG.DEMO/C",
   postor: "CONSORCIO SUPERVISOR NORTE",
+  origen: "mcp",
   estado: "completado",
   etapas: etapasCompletas(38, {
     validacion: etapaRes("validacion", "ok", met(38, 38), [
@@ -83,7 +84,7 @@ const jobA: PivoteJob = {
   observaciones: [],
   items_revision: [],
   excel_final: "/api/pivote/jobs/job-aaa111/excel",
-  zip_infoobras: null,
+  zip_infoobras: "/api/pivote/jobs/job-aaa111/zip",
   creado_en: "2026-06-08T14:05:00Z",
   actualizado_en: "2026-06-08T14:31:00Z",
 };
@@ -95,6 +96,7 @@ const jobB: PivoteJob = {
   concurso_id: "c-demo-1",
   concurso: "CP-02-2026/GOB.REG.DEMO/C",
   postor: "CONSORCIO SALUD ANDINA",
+  origen: "mcp",
   estado: "requiere_revision",
   etapas: etapasCompletas(41, {
     resolucion_cui: etapaRes("resolucion_cui", "ok_con_revision", met(41, 38, 3)),
@@ -146,6 +148,7 @@ const jobC: PivoteJob = {
   concurso_id: "c-demo-1",
   concurso: "CP-02-2026/GOB.REG.DEMO/C",
   postor: "INGENIEROS UNIDOS S.A.C.",
+  origen: "mcp",
   estado: "en_proceso",
   etapas: [
     etapaRes("ingesta", "ok", met(44, 44, 0, 0, 300)),
@@ -165,11 +168,13 @@ const jobD: PivoteJob = {
   concurso_id: "c-demo-2",
   concurso: "AS-15-2026/MUNI.DEMO",
   postor: "SUPERVISIONES DEL SUR E.I.R.L.",
+  origen: "dropzone",
   estado: "completado",
   etapas: etapasCompletas(17),
   observaciones: [],
   items_revision: [],
   excel_final: "/api/pivote/jobs/job-ddd444/excel",
+  zip_infoobras: "/api/pivote/jobs/job-ddd444/zip",
   creado_en: "2026-04-12T11:00:00Z",
   actualizado_en: "2026-04-12T11:18:00Z",
 };
@@ -284,6 +289,7 @@ export const db = {
       concurso_id: concursoId,
       concurso: c?.nomenclatura ?? null,
       postor,
+      origen: "dropzone",
       estado: "en_proceso",
       etapas: [etapaRes("ingesta", "ok", met(1, 1, 0, 0, 250))],
       observaciones: [],
@@ -314,7 +320,10 @@ export const db = {
       if (et.estado === "ok_con_revision" && pendientesEtapa === 0) et.estado = "ok";
       et.metrica.items_revision = pendientesEtapa;
     }
-    if (j.items_revision.every((it) => it.resuelto)) j.estado = "completado";
+    if (j.items_revision.every((it) => it.resuelto)) {
+      j.estado = "completado";
+      j.zip_infoobras = j.zip_infoobras ?? `/api/pivote/jobs/${j.job_id}/zip`;
+    }
     j.actualizado_en = new Date().toISOString();
     return j;
   },
@@ -353,6 +362,7 @@ function avanzarSimulacion(j: PivoteJob) {
   } else {
     j.estado = "completado";
     j.excel_final = `/api/pivote/jobs/${j.job_id}/excel`;
+    j.zip_infoobras = `/api/pivote/jobs/${j.job_id}/zip`;
   }
   j.actualizado_en = new Date().toISOString();
 }

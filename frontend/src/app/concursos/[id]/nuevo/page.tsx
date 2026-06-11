@@ -47,7 +47,7 @@ function Zona({
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
-      className={`bg-surface-container-lowest p-8 rounded-lg border-2 border-dashed transition-colors cursor-pointer ${borde}`}
+      className={`bg-surface-container-lowest p-8 rounded-xl shadow-ambient border-2 border-dashed transition-colors cursor-pointer ${borde}`}
     >
       <input
         ref={inputRef} type="file" className="hidden"
@@ -126,6 +126,14 @@ export default function NuevoAnalisisPivote({ params }: { params: Promise<{ id: 
           <span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver al concurso
         </Link>
 
+        <div className="mb-5 bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 px-5 py-3.5 flex items-center gap-3">
+          <span className="material-symbols-outlined text-primary text-xl">bolt</span>
+          <p className="text-xs text-outline leading-relaxed">
+            Normalmente <b className="text-primary">no necesitas esta pantalla</b>: el MCP local sube el
+            análisis directo desde la sesión de Claude del ingeniero. Esta es la vía manual (Camino B).
+          </p>
+        </div>
+
         <div className="grid md:grid-cols-2 gap-4">
           <Zona
             label="Excel — Formato de Evaluación"
@@ -171,7 +179,7 @@ export default function NuevoAnalisisPivote({ params }: { params: Promise<{ id: 
         <button
           onClick={enviar}
           disabled={!listo || enviando}
-          className="mt-6 h-11 px-6 rounded-lg bg-primary text-on-primary text-[0.875rem] font-semibold disabled:opacity-40 flex items-center gap-2"
+          className="mt-6 inline-flex items-center gap-1.5 primary-gradient text-white text-sm font-semibold px-6 py-3 rounded-lg transition-opacity hover:opacity-90 disabled:opacity-40"
         >
           <span className="material-symbols-outlined text-[18px]">
             {enviando ? "hourglass_top" : "rocket_launch"}

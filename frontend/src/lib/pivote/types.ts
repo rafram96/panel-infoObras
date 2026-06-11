@@ -92,6 +92,9 @@ export interface PivoteJob {
   concurso_id?: string | null;
   concurso?: string | null;
   postor?: string | null;
+  /** Por dónde llegó: el MCP local lo crea directo desde la sesión de Claude
+   *  del ingeniero; el dropzone es la alternativa manual. */
+  origen?: "mcp" | "dropzone" | null;
   estado: JobEstado;
   etapas: ResultadoEtapa[];
   observaciones: Observacion[];

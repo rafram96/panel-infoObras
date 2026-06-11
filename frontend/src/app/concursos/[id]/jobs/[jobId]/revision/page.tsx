@@ -19,7 +19,7 @@ function TarjetaItem({
   const [cuiManual, setCuiManual] = useState("");
 
   return (
-    <div className="p-5 rounded-lg bg-surface-container-lowest border border-amber-300/40 dark:border-amber-700/40">
+    <div className="bg-surface-container-lowest p-5 rounded-xl shadow-ambient border border-outline-variant/10 border-l-4 border-l-amber-500">
       {/* contexto de la experiencia — decidir sin abrir nada más */}
       <div className="flex flex-wrap items-center gap-2 mb-1">
         <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-[0.6875rem] font-bold">
@@ -80,7 +80,7 @@ function TarjetaItem({
         <button
           disabled={ocupado || cuiManual.length < 4}
           onClick={() => onResolver(item, { cui: cuiManual })}
-          className="h-9 px-4 rounded-lg bg-primary text-on-primary text-[0.75rem] font-bold disabled:opacity-40"
+          className="h-9 px-4 rounded-lg primary-gradient text-white text-[0.75rem] font-bold disabled:opacity-40 transition-opacity hover:opacity-90"
         >
           Confirmar CUI
         </button>
@@ -147,13 +147,13 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
         </Link>
 
         {mensaje && (
-          <div className="mb-5 p-3 rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900 text-[0.8125rem] text-green-800 dark:text-green-300">
-            {mensaje}
+          <div className="mb-5 px-4 py-3 rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900/50 text-[0.8125rem] text-green-800 dark:text-green-300 shadow-ambient flex items-center gap-2"><span className="material-symbols-outlined text-base">check_circle</span><span>
+            {mensaje}</span>
           </div>
         )}
 
         {pendientes.length === 0 ? (
-          <div className="p-8 rounded-lg bg-surface-container-lowest border border-green-300/40 text-center">
+          <div className="bg-surface-container-lowest p-8 rounded-xl shadow-ambient border border-outline-variant/10 text-center">
             <span className="material-symbols-outlined text-green-600 text-4xl">task_alt</span>
             <p className="mt-2 text-[0.9375rem] font-bold text-primary">Cola limpia</p>
             <p className="text-[0.8125rem] text-on-surface-variant mt-1">
@@ -161,7 +161,7 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
             </p>
             <Link
               href={`/concursos/${id}/jobs/${jobId}`}
-              className="inline-flex items-center gap-2 mt-4 h-10 px-4 rounded-lg bg-primary text-on-primary text-[0.8125rem] font-semibold"
+              className="inline-flex items-center gap-1.5 mt-4 primary-gradient text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-opacity hover:opacity-90"
             >
               Ver el análisis completo
             </Link>

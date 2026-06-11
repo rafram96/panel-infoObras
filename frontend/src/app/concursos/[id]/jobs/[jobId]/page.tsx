@@ -1,36 +1,262 @@
 "use client";
 
-/** P3 · Job en vivo (8 etapas, métricas, polling) + P5 · Resumen del análisis
- *  (veredictos con diff Claude→backend, alertas con decisión, factores). */
+/** P3 · Job en vivo — pipeline de 8 etapas con DETALLE expandible por etapa
+ *  (métricas, observaciones, duración) + P5 · Resumen del análisis
+ *  (veredictos Claude→backend, alertas con decisión, factores, entregables). */
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
 import {
-  type AlertaResumen, type PivoteJob, type ResumenAnalisis,
-  type SaludPortal, ETAPA_LABEL, ETAPAS_ORDEN, JOB_ESTADO_UI, SEVERIDAD_UI,
-  pendientesHumano,
+  type AlertaResumen, type Observacion, type PivoteJob, type ResultadoEtapa,
+  type ResumenAnalisis, type SaludPortal,
+  ETAPA_LABEL, ETAPAS_ORDEN, JOB_ESTADO_UI, SEVERIDAD_UI, pendientesHumano,
 } from "@/lib/pivote/types";
 
-const ETAPA_UI: Record<string, { icon: string; cls: string }> = {
-  ok: { icon: "check_circle", cls: "text-green-600 dark:text-green-400" },
-  ok_con_revision: { icon: "rule", cls: "text-amber-600 dark:text-amber-400" },
-  error_parcial: { icon: "warning", cls: "text-orange-600 dark:text-orange-400" },
-  error: { icon: "cancel", cls: "text-red-600 dark:text-red-400" },
-  en_curso: { icon: "progress_activity", cls: "text-blue-600 dark:text-blue-400 animate-spin" },
-  pendiente: { icon: "radio_button_unchecked", cls: "text-outline" },
+// ── presentación por estado de etapa ─────────────────────────────────────────
+const ETAPA_UI: Record<string, { icon: string; circulo: string; texto: string }> = {
+  ok: { icon: "check", circulo: "bg-green-500 text-white", texto: "text-green-600 dark:text-green-400" },
+  ok_con_revision: { icon: "rule", circulo: "bg-amber-500 text-white", texto: "text-amber-600 dark:text-amber-400" },
+  error_parcial: { icon: "warning", circulo: "bg-orange-500 text-white", texto: "text-orange-600 dark:text-orange-400" },
+  error: { icon: "close", circulo: "bg-red-600 text-white", texto: "text-red-600 dark:text-red-400" },
+  en_curso: { icon: "sync", circulo: "bg-primary text-white", texto: "text-primary" },
+  pendiente: { icon: "", circulo: "bg-surface-container-high text-outline", texto: "text-outline" },
 };
 
+const ESTADO_ETAPA_LABEL: Record<string, string> = {
+  ok: "Completada",
+  ok_con_revision: "Completada · dejó items a revisión",
+  error_parcial: "Completada con errores parciales — el resto continuó",
+  error: "Falló (estructural)",
+  en_curso: "En curso…",
+  pendiente: "Pendiente",
+};
+
+function fmtMs(ms?: number | null): string {
+  if (ms == null) return "—";
+  if (ms < 1000) return `${ms} ms`;
+  const s = ms / 1000;
+  return s < 60 ? `${s.toFixed(1)} s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
+}
+
+// ── tarjeta métrica (mismo patrón del dashboard) ─────────────────────────────
+function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
+  icon: string; label: string; value: string; accent?: "rojo" | "ambar"; borde?: string;
+}) {
+  const color = accent === "rojo" ? "text-red-600" : accent === "ambar" ? "text-amber-600" : "text-primary";
+  return (
+    <div className={`bg-surface-container-lowest p-4 border-l-4 ${borde} shadow-ambient rounded-xl flex items-start gap-4`}>
+      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+        <span className={`material-symbols-outlined text-xl ${color}`}>{icon}</span>
+      </div>
+      <div>
+        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
+        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── fila de etapa con detalle expandible ─────────────────────────────────────
+function FilaEtapa({ res, nombre, abierta, onToggle }: {
+  res?: ResultadoEtapa; nombre: string; abierta: boolean; onToggle: () => void;
+}) {
+  const estado = res?.estado ?? "pendiente";
+  const ui = ETAPA_UI[estado];
+  const m = res?.metrica;
+  const tieneDetalle = !!res && (m!.items_total > 0 || res.observaciones.length > 0 || !!res.error);
+
+  return (
+    <div className="rounded-lg overflow-hidden">
+      <button
+        onClick={onToggle}
+        disabled={!tieneDetalle}
+        className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+          tieneDetalle ? "hover:bg-surface-container-high/50 cursor-pointer" : "cursor-default"
+        } ${abierta ? "bg-surface-container-high/40" : ""}`}
+      >
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${ui.circulo}`}>
+          {ui.icon ? (
+            <span className={`material-symbols-outlined text-base ${estado === "en_curso" ? "animate-spin" : ""}`}>{ui.icon}</span>
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-current opacity-40" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-[0.8125rem] font-semibold ${ui.texto}`}>{nombre}</p>
+          <p className="text-[0.6875rem] text-outline">{ESTADO_ETAPA_LABEL[estado]}</p>
+        </div>
+        {m && m.items_total > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            <span className="px-2 py-0.5 rounded bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 text-[0.6875rem] font-bold">
+              {m.items_ok}/{m.items_total}
+            </span>
+            {m.items_revision > 0 && (
+              <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-[0.6875rem] font-bold">
+                {m.items_revision} revisión
+              </span>
+            )}
+            {m.items_error > 0 && (
+              <span className="px-2 py-0.5 rounded bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 text-[0.6875rem] font-bold">
+                {m.items_error} error
+              </span>
+            )}
+            {res!.observaciones.length > 0 && (
+              <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-[0.6875rem] font-bold">
+                {res!.observaciones.length} obs.
+              </span>
+            )}
+          </div>
+        )}
+        {tieneDetalle && (
+          <span className={`material-symbols-outlined text-outline text-[20px] transition-transform ${abierta ? "rotate-180" : ""}`}>
+            expand_more
+          </span>
+        )}
+      </button>
+
+      {/* detalle expandido */}
+      {abierta && res && (
+        <div className="ml-11 mr-3 mb-3 p-4 rounded-lg bg-surface-container-high/30 border border-outline-variant/10 animate-[fadeIn_.2s_ease]">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-1">
+            {[
+              ["Items", String(res.metrica.items_total)],
+              ["OK", String(res.metrica.items_ok)],
+              ["A revisión", String(res.metrica.items_revision)],
+              ["Con error", String(res.metrica.items_error)],
+              ["Reintentos", String(res.metrica.reintentos)],
+              ["Duración", fmtMs(res.metrica.duracion_ms)],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <p className="text-[0.625rem] font-bold uppercase tracking-wide text-slate-500">{k}</p>
+                <p className="text-sm font-bold text-primary">{v}</p>
+              </div>
+            ))}
+          </div>
+
+          {res.error && (
+            <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50">
+              <p className="text-[0.75rem] font-mono text-red-700 dark:text-red-300">{res.error}</p>
+            </div>
+          )}
+
+          {res.observaciones.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <p className="text-[0.625rem] font-bold uppercase tracking-wide text-slate-500">
+                Observaciones de la etapa
+              </p>
+              {res.observaciones.map((o: Observacion, i) => {
+                const sui = SEVERIDAD_UI[o.severidad];
+                return (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className={`px-2 py-0.5 rounded text-[0.625rem] font-bold whitespace-nowrap ${sui.cls}`}>
+                      {o.codigo ?? sui.label}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[0.75rem] text-primary leading-snug">{o.mensaje}</p>
+                      {o.referencia && (
+                        <p className="text-[0.6875rem] font-mono text-outline">{o.referencia}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── alertas: decisión inline (sin window.prompt) ─────────────────────────────
+function FilaAlerta({ a, onDecidir }: {
+  a: AlertaResumen; onDecidir: (a: AlertaResumen, relevante: boolean, razon?: string) => void;
+}) {
+  const [descartando, setDescartando] = useState(false);
+  const [razon, setRazon] = useState("");
+  const sui = SEVERIDAD_UI[a.severidad];
+
+  return (
+    <div className="px-5 py-4">
+      <div className="flex flex-wrap items-start gap-3">
+        <span className={`px-2.5 py-0.5 rounded text-[0.6875rem] font-bold whitespace-nowrap ${sui.cls}`}>
+          {a.codigo}
+        </span>
+        <div className="flex-1 min-w-[240px]">
+          <p className="text-sm text-primary leading-snug">{a.mensaje}</p>
+          <p className="text-[0.6875rem] text-outline mt-1">
+            {a.referencia}{a.fuente ? <> · <span className="font-medium">{a.fuente}</span></> : null}
+          </p>
+        </div>
+        {a.decision ? (
+          <span className={`px-2.5 py-1 rounded-lg text-[0.6875rem] font-bold ${
+            a.decision.relevante
+              ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+              : "bg-surface-container-high text-on-surface-variant"
+          }`}>
+            <span className="material-symbols-outlined text-[14px] align-text-bottom mr-1">
+              {a.decision.relevante ? "flag" : "block"}
+            </span>
+            {a.decision.relevante ? "Relevante" : `Descartada${a.decision.razon ? ` — ${a.decision.razon}` : ""}`}
+          </span>
+        ) : !descartando ? (
+          <div className="flex gap-2">
+            <button
+              onClick={() => onDecidir(a, true)}
+              className="px-3 h-8 rounded-lg primary-gradient text-white text-[0.6875rem] font-bold hover:opacity-90"
+            >
+              Relevante
+            </button>
+            <button
+              onClick={() => setDescartando(true)}
+              className="px-3 h-8 rounded-lg border border-outline-variant/30 text-on-surface-variant text-[0.6875rem] font-bold hover:bg-surface-container-high"
+            >
+              Descartar…
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2 items-center">
+            <input
+              autoFocus
+              value={razon}
+              onChange={(e) => setRazon(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && razon.trim()) onDecidir(a, false, razon.trim()); }}
+              placeholder="razón (queda en el expediente)"
+              className="h-8 px-3 rounded-lg bg-surface border border-outline-variant/30 text-[0.75rem] w-56 focus:outline-none focus:border-primary/50"
+            />
+            <button
+              disabled={!razon.trim()}
+              onClick={() => onDecidir(a, false, razon.trim())}
+              className="px-3 h-8 rounded-lg bg-primary text-on-primary text-[0.6875rem] font-bold disabled:opacity-40"
+            >
+              OK
+            </button>
+            <button
+              onClick={() => setDescartando(false)}
+              className="material-symbols-outlined text-outline text-[18px]"
+            >
+              close
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── página ────────────────────────────────────────────────────────────────────
 export default function JobPivote({ params }: { params: Promise<{ id: string; jobId: string }> }) {
   const { id, jobId } = use(params);
   const [job, setJob] = useState<PivoteJob | null>(null);
   const [resumen, setResumen] = useState<ResumenAnalisis | null>(null);
   const [salud, setSalud] = useState<SaludPortal[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const cargar = useCallback(async () => {
     const r = await fetch(`/api/pivote/jobs/${jobId}`);
-    if (!r.ok) { setError("Job no encontrado"); return; }
+    if (!r.ok) { setError("Análisis no encontrado"); return; }
     const j: PivoteJob = await r.json();
     setJob(j);
     if (j.estado === "completado" || j.estado === "requiere_revision") {
@@ -41,12 +267,10 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
 
   useEffect(() => {
     cargar();
-    fetch("/api/pivote/salud").then(async (r) => {
-      if (r.ok) setSalud(await r.json());
-    });
+    fetch("/api/pivote/salud").then(async (r) => { if (r.ok) setSalud(await r.json()); });
   }, [cargar]);
 
-  // polling mientras el pipeline corre (el backend real además empuja por WS)
+  // polling mientras corre (el backend real además empuja ProgresoJob por WS)
   useEffect(() => {
     if (job?.estado === "en_proceso" || job?.estado === "recibido") {
       timerRef.current = setInterval(cargar, 2500);
@@ -54,245 +278,310 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
     }
   }, [job?.estado, cargar]);
 
-  const decidirAlerta = async (alerta: AlertaResumen, relevante: boolean) => {
-    const razon = relevante ? undefined : window.prompt("Razón para descartar (queda en el expediente):") ?? undefined;
-    if (!relevante && razon === undefined) return;
+  const decidirAlerta = async (a: AlertaResumen, relevante: boolean, razon?: string) => {
     const r = await fetch(`/api/pivote/jobs/${jobId}/alertas`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ alerta_id: alerta.id, relevante, razon }),
+      body: JSON.stringify({ alerta_id: a.id, relevante, razon }),
     });
     if (r.ok) setResumen(await r.json());
   };
 
-  if (error) return <PanelShell title="Análisis"><p className="text-[0.8125rem] text-red-600">{error}</p></PanelShell>;
-  if (!job) return <PanelShell title="Análisis"><p className="text-[0.8125rem] text-on-surface-variant">Cargando…</p></PanelShell>;
+  if (error) return <PanelShell title="Análisis"><p className="text-sm text-red-600">{error}</p></PanelShell>;
+  if (!job) return <PanelShell title="Análisis"><p className="text-sm text-outline">Cargando…</p></PanelShell>;
 
   const ui = JOB_ESTADO_UI[job.estado];
   const pend = pendientesHumano(job);
   const porEtapa = new Map(job.etapas.map((e) => [e.etapa, e]));
   const completas = job.etapas.filter((e) => ["ok", "ok_con_revision", "error_parcial"].includes(e.estado)).length;
+  const pct = Math.round((completas / ETAPAS_ORDEN.length) * 100);
+  const activo = job.estado === "en_proceso" || job.estado === "recibido";
+  const criticas = resumen?.alertas.filter((x) => x.severidad === "critica").length ?? 0;
+  const nAlertas = resumen?.alertas.length ?? 0;
   const portalesCaidos = salud.filter((s) => !s.ok);
+
+  const toggle = (nombre: string) =>
+    setAbiertas((prev) => {
+      const s = new Set(prev);
+      if (s.has(nombre)) s.delete(nombre); else s.add(nombre);
+      return s;
+    });
+
+  // tramos para render: antes de la rama ∥, la rama, después
+  const previas = ETAPAS_ORDEN.slice(0, ETAPAS_ORDEN.indexOf("infoobras"));
+  const rama = ["infoobras", "sunat"] as const;
+  const posteriores = ETAPAS_ORDEN.slice(ETAPAS_ORDEN.indexOf("sunat") + 1);
 
   return (
     <PanelShell title={job.postor ?? job.analisis_id} subtitle={job.concurso ?? undefined}>
-      <div className="max-w-5xl">
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <Link href={`/concursos/${id}`} className="text-[0.75rem] text-on-surface-variant hover:text-primary flex items-center gap-1">
-            <span className="material-symbols-outlined text-[16px]">arrow_back</span> Expediente
-          </Link>
-          <span className={`px-2.5 py-1 rounded-full text-[0.6875rem] font-bold ${ui.cls}`}>{ui.label}</span>
-          <span className="text-[0.75rem] text-on-surface-variant">{completas}/{ETAPAS_ORDEN.length} etapas</span>
-          <div className="flex-1" />
-          {pend > 0 && (
-            <Link
-              href={`/concursos/${id}/jobs/${jobId}/revision`}
-              className="h-10 px-4 rounded-lg bg-amber-500 text-white text-[0.8125rem] font-semibold flex items-center gap-2 hover:opacity-90"
-            >
-              <span className="material-symbols-outlined text-[18px]">pending_actions</span>
-              Resolver {pend} pendiente{pend > 1 ? "s" : ""}
-            </Link>
-          )}
-          {job.excel_final && (
-            <a
-              href={job.excel_final}
-              className="h-10 px-4 rounded-lg border border-primary/40 text-primary text-[0.8125rem] font-semibold flex items-center gap-2 hover:bg-primary/5"
-            >
-              <span className="material-symbols-outlined text-[18px]">download</span>
-              Excel final
-            </a>
-          )}
-        </div>
+      {/* barra superior */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <Link href={`/concursos/${id}`} className="inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
+          <span className="material-symbols-outlined text-base">arrow_back</span> Expediente
+        </Link>
+        <span className={`px-2.5 py-0.5 rounded text-[0.6875rem] font-semibold ${ui.cls}`}>{ui.label}</span>
+        {job.origen === "mcp" && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-primary/10 text-primary text-[0.6875rem] font-semibold"
+            title="Creado automáticamente por el MCP local desde la sesión de Claude del ingeniero">
+            <span className="material-symbols-outlined text-[14px]">bolt</span> vía MCP
+          </span>
+        )}
+        <span className="text-xs font-mono text-outline">{job.analisis_id}</span>
+      </div>
 
-        {/* banner de salud de portales */}
-        {portalesCaidos.length > 0 && (
-          <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 flex items-start gap-3">
-            <span className="material-symbols-outlined text-red-600">cloud_off</span>
-            <div className="text-[0.8125rem] text-red-700 dark:text-red-300">
-              {portalesCaidos.map((p) => (
-                <p key={p.portal}>
-                  <b>{p.portal.toUpperCase()}</b> no responde
-                  {p.diagnostico ? ` (${p.diagnostico})` : ""}{p.desde ? ` desde ${p.desde}` : ""} —
-                  las experiencias de esa rama quedarán en espera.
-                </p>
-              ))}
+      {/* métricas */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <MetricCard icon="conveyor_belt" label="Pipeline" value={`${completas}/${ETAPAS_ORDEN.length}`} />
+        <MetricCard icon="speed" label="Progreso" value={`${pct}%`} />
+        <MetricCard
+          icon="notification_important" label="Alertas"
+          value={resumen ? String(nAlertas) : "—"}
+          accent={criticas > 0 ? "rojo" : undefined}
+          borde={criticas > 0 ? "border-red-500" : "border-primary"}
+        />
+        <MetricCard
+          icon="pending_actions" label="A revisión"
+          value={String(pend)}
+          accent={pend > 0 ? "ambar" : undefined}
+          borde={pend > 0 ? "border-amber-500" : "border-primary"}
+        />
+      </section>
+
+      {/* banner de salud de portales */}
+      {portalesCaidos.length > 0 && (
+        <div className="mb-6 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-xl p-4 flex items-start gap-3">
+          <span className="material-symbols-outlined text-red-600">cloud_off</span>
+          <div className="text-sm text-red-700 dark:text-red-300">
+            {portalesCaidos.map((p) => (
+              <p key={p.portal}>
+                <b>{p.portal.toUpperCase()}</b> no responde{p.diagnostico ? ` (${p.diagnostico})` : ""} —
+                las experiencias de esa rama quedan en espera, el resto del pipeline continúa.
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* barra de progreso con shimmer mientras corre */}
+      {activo && (
+        <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 p-5 mb-6">
+          <div className="relative h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div className="absolute inset-y-0 left-0 overflow-hidden rounded-full" style={{ width: `${pct}%` }}>
+              <div className="absolute inset-0 animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
             </div>
           </div>
-        )}
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-xs text-outline">
+              {ETAPA_LABEL[job.etapas.find((e) => e.estado === "en_curso")?.etapa ?? "ingesta"]}…
+            </span>
+            <span className="text-sm font-bold text-primary">{pct}%</span>
+          </div>
+        </div>
+      )}
 
-        {/* P3 · pipeline de 8 etapas */}
-        <section className="rounded-lg bg-surface-container-lowest border border-outline-variant/20 p-5 mb-8">
-          <h2 className="text-[0.875rem] font-bold text-primary mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px]">conveyor_belt</span>
+      {/* ── PIPELINE con detalle por etapa ── */}
+      <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 mb-8 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
+          <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
+            <span className="material-symbols-outlined text-xl">conveyor_belt</span>
             Pipeline del backend
           </h2>
-          <ol className="space-y-1">
-            {ETAPAS_ORDEN.map((nombre) => {
-              const res = porEtapa.get(nombre);
-              const estado = res?.estado ?? "pendiente";
-              const eui = ETAPA_UI[estado];
-              const m = res?.metrica;
-              return (
-                <li key={nombre} className="flex items-center gap-3 py-2 border-b border-outline-variant/10 last:border-0">
-                  <span className={`material-symbols-outlined text-[20px] ${eui.cls}`}>{eui.icon}</span>
-                  <span className="flex-1 text-[0.8125rem] font-medium">{ETAPA_LABEL[nombre]}</span>
-                  {res?.estado === "error" && res.error && (
-                    <span className="text-[0.6875rem] text-red-600 max-w-[360px] truncate" title={res.error}>{res.error}</span>
-                  )}
-                  {m && m.items_total > 0 && (
-                    <span className="text-[0.6875rem] text-on-surface-variant whitespace-nowrap">
-                      {m.items_ok}/{m.items_total} OK
-                      {m.items_revision > 0 && <span className="text-amber-600 font-semibold"> · {m.items_revision} a revisión</span>}
-                      {m.items_error > 0 && <span className="text-orange-600 font-semibold"> · {m.items_error} con error</span>}
-                    </span>
-                  )}
-                  {(nombre === "infoobras" || nombre === "sunat") && (
-                    <span className="text-[0.625rem] uppercase tracking-wide text-outline">∥ paralela</span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-          {job.etapas.some((e) => e.estado === "error_parcial") && (
-            <p className="mt-3 text-[0.75rem] text-orange-700 dark:text-orange-300">
-              Hubo items con error en alguna etapa, pero <b>el resto del análisis continuó</b> — los fallidos están identificados y se pueden re-disparar.
-            </p>
-          )}
-        </section>
+          <span className="text-[0.6875rem] text-outline">clic en una etapa para ver su detalle</span>
+        </div>
+        <div className="p-3">
+          {previas.map((nombre) => (
+            <FilaEtapa key={nombre} nombre={ETAPA_LABEL[nombre]} res={porEtapa.get(nombre)}
+              abierta={abiertas.has(nombre)} onToggle={() => toggle(nombre)} />
+          ))}
 
-        {/* P5 · Resumen del análisis */}
-        {resumen && (
-          <>
-            {/* veredictos con diff */}
-            <section className="rounded-lg bg-surface-container-lowest border border-outline-variant/20 overflow-hidden mb-8">
-              <div className="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between">
-                <h2 className="text-[0.875rem] font-bold text-primary flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px]">gavel</span>
-                  Veredictos por profesional — Claude → backend
-                </h2>
-                {resumen.puntaje_total != null && (
-                  <span className="text-[0.8125rem] font-bold">
-                    Puntaje técnico: <span className="text-primary text-[1rem]">{resumen.puntaje_total}</span>
-                  </span>
-                )}
-              </div>
-              <div className="divide-y divide-outline-variant/10">
-                {resumen.veredictos.map((v) => {
-                  const invertido = !!v.cumple_backend;
-                  return (
-                    <div key={v.n_prof} className={`px-5 py-4 ${invertido ? "bg-red-50/60 dark:bg-red-950/20" : ""}`}>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[0.8125rem] font-bold">{v.n_prof}. {v.cargo}</span>
-                        <span className="text-[0.75rem] text-on-surface-variant">{v.nombre}</span>
-                      </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[0.8125rem]">
-                        <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-200 font-semibold">
-                          Claude: {v.cumple_claude}
+          {/* rama paralela */}
+          <div className="my-1 ml-4 pl-3 border-l-2 border-dashed border-primary/30 relative">
+            <span className="absolute -left-[1px] -top-1 -translate-x-full pr-2 text-[0.625rem] font-bold uppercase tracking-wide text-primary/60 select-none hidden sm:block" />
+            <p className="px-3 pt-1 text-[0.625rem] font-bold uppercase tracking-[0.1rem] text-primary/60">
+              Ramas en paralelo
+            </p>
+            {rama.map((nombre) => (
+              <FilaEtapa key={nombre} nombre={ETAPA_LABEL[nombre]} res={porEtapa.get(nombre)}
+                abierta={abiertas.has(nombre)} onToggle={() => toggle(nombre)} />
+            ))}
+          </div>
+
+          {posteriores.map((nombre) => (
+            <FilaEtapa key={nombre} nombre={ETAPA_LABEL[nombre]} res={porEtapa.get(nombre)}
+              abierta={abiertas.has(nombre)} onToggle={() => toggle(nombre)} />
+          ))}
+        </div>
+      </section>
+
+      {/* ── ENTREGABLES ── */}
+      {(job.excel_final || job.zip_infoobras || pend > 0) && (
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div className="bg-surface-container-lowest p-5 rounded-xl shadow-ambient border border-outline-variant/10 flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-primary">
+              <span className="material-symbols-outlined text-xl">table_view</span>
+              <h3 className="text-sm font-semibold">Excel final enriquecido</h3>
+            </div>
+            <p className="text-xs text-outline leading-relaxed">
+              Formato de Evaluación regenerado por el backend: hoja CLAUDE + hojas por
+              profesional con días efectivos. Amarillo = Claude · naranja = backend.
+            </p>
+            {job.excel_final ? (
+              <a href={job.excel_final} download
+                className="mt-auto self-start inline-flex items-center gap-1.5 primary-gradient text-white text-xs font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90">
+                <span className="material-symbols-outlined text-base">download</span> Descargar .xlsx
+              </a>
+            ) : (
+              <span className="mt-auto text-xs font-medium text-outline">Disponible al completar</span>
+            )}
+          </div>
+
+          <div className="bg-surface-container-lowest p-5 rounded-xl shadow-ambient border border-outline-variant/10 flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-primary">
+              <span className="material-symbols-outlined text-xl">folder_zip</span>
+              <h3 className="text-sm font-semibold">ZIP documentos InfoObras</h3>
+            </div>
+            <p className="text-xs text-outline leading-relaxed">
+              Los documentos oficiales de cada obra (cronogramas, valorizaciones, expediente)
+              en árbol Proyecto → Profesional → Experiencia — la base del análisis humano.
+            </p>
+            {job.zip_infoobras ? (
+              <a href={job.zip_infoobras} download
+                className="mt-auto self-start inline-flex items-center gap-1.5 primary-gradient text-white text-xs font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90">
+                <span className="material-symbols-outlined text-base">download</span> Descargar .zip
+              </a>
+            ) : (
+              <span className="mt-auto text-xs font-medium text-outline">Disponible al completar</span>
+            )}
+          </div>
+
+          <div className="bg-surface-container-lowest p-5 rounded-xl shadow-ambient border border-outline-variant/10 flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-primary">
+              <span className="material-symbols-outlined text-xl">pending_actions</span>
+              <h3 className="text-sm font-semibold">Revisión humana</h3>
+            </div>
+            <p className="text-xs text-outline leading-relaxed">
+              {pend > 0
+                ? `${pend} experiencia${pend > 1 ? "s" : ""} esperan tu decisión (CUI, firmantes). Resolverlas re-dispara solo esa experiencia.`
+                : "Sin pendientes — todo lo verificable se resolvió automáticamente."}
+            </p>
+            {pend > 0 ? (
+              <Link href={`/concursos/${id}/jobs/${jobId}/revision`}
+                className="mt-auto self-start inline-flex items-center gap-1.5 bg-amber-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90">
+                <span className="material-symbols-outlined text-base">checklist</span> Resolver ahora
+              </Link>
+            ) : (
+              <span className="mt-auto text-xs font-medium text-green-600 inline-flex items-center gap-1">
+                <span className="material-symbols-outlined text-base">task_alt</span> Cola limpia
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── P5 · RESUMEN ── */}
+      {resumen && (
+        <>
+          {/* veredictos */}
+          <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 mb-8 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
+              <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
+                <span className="material-symbols-outlined text-xl">gavel</span>
+                Veredictos — Claude evalúa, el backend verifica
+              </h2>
+              {resumen.puntaje_total != null && (
+                <span className="text-xs text-outline">
+                  Puntaje técnico: <span className="text-lg font-bold text-primary align-middle">{resumen.puntaje_total}</span>
+                </span>
+              )}
+            </div>
+            <div className="divide-y divide-outline-variant/10">
+              {resumen.veredictos.map((v) => {
+                const invertido = !!v.cumple_backend;
+                return (
+                  <div key={v.n_prof} className={`px-5 py-4 ${invertido ? "bg-red-50/50 dark:bg-red-950/15 border-l-4 border-red-500" : ""}`}>
+                    <div className="flex flex-wrap items-baseline gap-2">
+                      <span className="text-sm font-semibold text-primary">{v.n_prof}. {v.cargo}</span>
+                      <span className="text-xs text-outline">{v.nombre}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-lg bg-yellow-100/80 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-200 text-[0.75rem] font-semibold">
+                        Claude · {v.cumple_claude}
+                      </span>
+                      <span className="material-symbols-outlined text-base text-outline">trending_flat</span>
+                      {invertido ? (
+                        <span className="px-2.5 py-1 rounded-lg bg-red-600 text-white text-[0.75rem] font-bold">
+                          Backend · {v.cumple_backend}
                         </span>
-                        <span className="material-symbols-outlined text-[16px] text-on-surface-variant">arrow_forward</span>
-                        {invertido ? (
-                          <span className="px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 font-bold">
-                            Backend: {v.cumple_backend}
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded bg-orange-50 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 font-semibold">
-                            Backend: confirma{v.anios_efectivos != null ? ` (${v.anios_efectivos} años efectivos)` : ""}
-                          </span>
-                        )}
-                      </div>
-                      {v.motivo_backend && (
-                        <p className="mt-1.5 text-[0.75rem] text-on-surface-variant">
-                          {v.motivo_backend}
-                          {v.fuente && <span className="text-outline"> · {v.fuente}</span>}
-                        </p>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-lg bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200 text-[0.75rem] font-semibold">
+                          Backend · confirma{v.anios_efectivos != null ? ` (${v.anios_efectivos} años efectivos)` : ""}
+                        </span>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            </section>
+                    {v.motivo_backend && (
+                      <p className="mt-2 text-xs text-outline leading-relaxed">
+                        <span className="material-symbols-outlined text-[14px] align-text-bottom mr-1">subdirectory_arrow_right</span>
+                        {v.motivo_backend}
+                        {v.fuente && <span className="font-medium"> · {v.fuente}</span>}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
 
-            {/* alertas con decisión humana */}
-            <section className="rounded-lg bg-surface-container-lowest border border-outline-variant/20 overflow-hidden mb-8">
-              <div className="px-5 py-4 border-b border-outline-variant/20">
-                <h2 className="text-[0.875rem] font-bold text-primary flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px]">notification_important</span>
-                  Alertas — la máquina detecta, tú decides
-                </h2>
-              </div>
-              <div className="divide-y divide-outline-variant/10">
-                {[...resumen.alertas]
-                  .sort((a, b) => SEVERIDAD_UI[a.severidad].orden - SEVERIDAD_UI[b.severidad].orden)
-                  .map((a) => {
-                    const sui = SEVERIDAD_UI[a.severidad];
-                    return (
-                      <div key={a.id} className="px-5 py-4 flex flex-wrap items-start gap-3">
-                        <span className={`px-2 py-0.5 rounded-full text-[0.6875rem] font-bold ${sui.cls}`}>
-                          {a.codigo} · {sui.label}
-                        </span>
-                        <div className="flex-1 min-w-[260px]">
-                          <p className="text-[0.8125rem]">{a.mensaje}</p>
-                          <p className="text-[0.6875rem] text-on-surface-variant mt-0.5">
-                            {a.referencia}{a.fuente ? ` · ${a.fuente}` : ""}
-                          </p>
-                        </div>
-                        {a.decision ? (
-                          <span className={`px-2.5 py-1 rounded-full text-[0.6875rem] font-bold ${
-                            a.decision.relevante
-                              ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
-                              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                          }`}>
-                            {a.decision.relevante ? "Marcada relevante" : `Descartada${a.decision.razon ? `: ${a.decision.razon}` : ""}`}
-                          </span>
-                        ) : (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => decidirAlerta(a, true)}
-                              className="px-3 h-8 rounded-lg bg-red-600 text-white text-[0.6875rem] font-bold hover:opacity-90"
-                            >
-                              Relevante
-                            </button>
-                            <button
-                              onClick={() => decidirAlerta(a, false)}
-                              className="px-3 h-8 rounded-lg border border-outline-variant/40 text-on-surface-variant text-[0.6875rem] font-bold hover:bg-surface-container-high"
-                            >
-                              Descartar…
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-            </section>
+          {/* alertas */}
+          <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 mb-8 overflow-hidden">
+            <div className="px-5 py-4 border-b border-outline-variant/10">
+              <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
+                <span className="material-symbols-outlined text-xl">notification_important</span>
+                Alertas — la máquina detecta, tú decides
+              </h2>
+            </div>
+            <div className="divide-y divide-outline-variant/10">
+              {[...resumen.alertas]
+                .sort((a, b) => SEVERIDAD_UI[a.severidad].orden - SEVERIDAD_UI[b.severidad].orden)
+                .map((a) => <FilaAlerta key={a.id} a={a} onDecidir={decidirAlerta} />)}
+            </div>
+          </section>
 
-            {/* factores */}
-            <section className="rounded-lg bg-surface-container-lowest border border-outline-variant/20 overflow-hidden">
-              <div className="px-5 py-4 border-b border-outline-variant/20">
-                <h2 className="text-[0.875rem] font-bold text-primary flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px]">grading</span>
-                  Factores de evaluación
-                </h2>
-              </div>
-              <table className="w-full text-[0.8125rem]">
-                <tbody>
-                  {resumen.factores.map((f, i) => (
-                    <tr key={i} className="border-b border-outline-variant/10 last:border-0">
-                      <td className="px-5 py-3 font-medium">{f.factor}</td>
-                      <td className="px-4 py-3 text-on-surface-variant">{f.detalle}</td>
-                      <td className="px-5 py-3 text-right font-bold whitespace-nowrap">
-                        {typeof f.puntaje === "number" ? f.puntaje : (
-                          <span className="text-on-surface-variant font-semibold">{f.puntaje ?? "—"}</span>
-                        )}
-                      </td>
-                    </tr>
+          {/* factores */}
+          <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+            <div className="px-5 py-4 border-b border-outline-variant/10">
+              <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
+                <span className="material-symbols-outlined text-xl">grading</span>
+                Factores de evaluación
+              </h2>
+            </div>
+            <table className="w-full text-left">
+              <thead className="bg-surface-container-high">
+                <tr>
+                  {["Factor", "Detalle", "Puntaje"].map((h) => (
+                    <th key={h} className="px-5 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500 last:text-right">{h}</th>
                   ))}
-                </tbody>
-              </table>
-            </section>
-          </>
-        )}
-      </div>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/10">
+                {resumen.factores.map((f, i) => (
+                  <tr key={i} className="hover:bg-surface-container-high/40 transition-colors">
+                    <td className="px-5 py-3 text-sm text-primary font-medium">{f.factor}</td>
+                    <td className="px-5 py-3 text-xs text-outline">{f.detalle}</td>
+                    <td className="px-5 py-3 text-right">
+                      {typeof f.puntaje === "number" ? (
+                        <span className="text-sm font-bold text-primary">{f.puntaje}</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded bg-surface-container-high text-[0.6875rem] font-semibold text-outline">{f.puntaje ?? "—"}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        </>
+      )}
     </PanelShell>
   );
 }
