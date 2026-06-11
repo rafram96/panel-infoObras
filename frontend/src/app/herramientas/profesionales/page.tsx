@@ -1,6 +1,14 @@
 "use client";
 
-import { Suspense, useState, type FormEvent, type ReactNode } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import PanelShell from "@/components/PanelShell";
 
@@ -45,6 +53,8 @@ interface ResultadoCruceExperiencia {
 
 interface CruceInfoObrasResponse {
   ok: boolean;
+  cached?: boolean;
+  ejecutado_en?: string;
   extraction_job_id: string;
   tdr_job_id: string;
   cruces: ResultadoCruceExperiencia[];
@@ -54,6 +64,8 @@ interface CruceInfoObrasResponse {
   total_experiencias: number;
   total_alertas: number;
 }
+
+type FiltroInfoObras = "all" | "con-alertas" | "no-encontradas" | "paralizaciones" | "nominal-falla";
 
 // ─── Tipos SUNAT ─────────────────────────────────────────────────────────────
 
@@ -93,6 +105,8 @@ interface ResultadoCruceExperienciaSUNAT {
 
 interface CruceSunatResponse {
   ok: boolean;
+  cached?: boolean;
+  ejecutado_en?: string;
   extraction_job_id: string;
   total_experiencias: number;
   cruces: ResultadoCruceExperienciaSUNAT[];
@@ -105,6 +119,8 @@ interface CruceSunatResponse {
   total_mismatches: number;
   total_ambiguos: number;
 }
+
+type FiltroSunat = "all" | "con-alertas" | "alt04" | "mismatch" | "baja" | "sin-empresa" | "ambiguos";
 
 // ============================================================================
 // Helpers visuales
@@ -129,6 +145,22 @@ function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
+function fmtDateTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+  } catch {
+    return iso;
+  }
 }
 
 function scoreColor(score: number | null): string {
@@ -244,33 +276,98 @@ function CruceInfoObrasView({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<CruceInfoObrasResponse | null>(null);
+  const [filtro, setFiltro] = useState<FiltroInfoObras>("all");
+  const [busqueda, setBusqueda] = useState("");
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!extractionJobId.trim() || !tdrJobId.trim()) return;
-    setLoading(true);
-    setError(null);
-    setData(null);
+  const runCruce = useCallback(
+    async (extId: string, tdrId: string, refresh = false) => {
+      if (!extId.trim() || !tdrId.trim()) return;
+      setLoading(true);
+      setError(null);
 
-    try {
-      const fd = new FormData();
-      fd.append("tdr_job_id", tdrJobId.trim());
-      const res = await fetch(
-        `/api/jobs/${extractionJobId.trim()}/cruce-infoobras`,
-        { method: "POST", body: fd },
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.detail ?? `Error ${res.status}`);
+      try {
+        const fd = new FormData();
+        fd.append("tdr_job_id", tdrId.trim());
+        const url =
+          `/api/jobs/${extId.trim()}/cruce-infoobras` +
+          (refresh ? "?refresh=true" : "");
+        const res = await fetch(url, { method: "POST", body: fd });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.detail ?? `Error ${res.status}`);
+        }
+        const json: CruceInfoObrasResponse = await res.json();
+        setData(json);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Error al cruzar");
+      } finally {
+        setLoading(false);
       }
-      const json: CruceInfoObrasResponse = await res.json();
-      setData(json);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al cruzar");
-    } finally {
-      setLoading(false);
+    },
+    [],
+  );
+
+  // Auto-cargar cache cuando llegan params en URL (navegacion desde /jobs/[id])
+  useEffect(() => {
+    if (initialExtractionId && initialTdrId && !data) {
+      runCruce(initialExtractionId, initialTdrId, false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialExtractionId, initialTdrId]);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    runCruce(extractionJobId, tdrJobId, false);
   };
+
+  // Métricas derivadas
+  const metricsExtra = useMemo(() => {
+    if (!data) return null;
+    let criticas = 0;
+    let observaciones = 0;
+    let infoNominalFalla = 0;
+    let conParalizacion = 0;
+    let diasTotalesParaliz = 0;
+    for (const c of data.cruces) {
+      for (const s of c.senales) {
+        if (s.severidad === "critica") criticas++;
+        else if (s.severidad === "observacion") observaciones++;
+      }
+      if (c.aplica_verif_nominal && c.nombre_coincide === false) infoNominalFalla++;
+      if (c.dias_paralizado_en_periodo > 0) {
+        conParalizacion++;
+        diasTotalesParaliz += c.dias_paralizado_en_periodo;
+      }
+    }
+    return { criticas, observaciones, infoNominalFalla, conParalizacion, diasTotalesParaliz };
+  }, [data]);
+
+  // Aplicar filtro + busqueda
+  const crucesFiltrados = useMemo(() => {
+    if (!data) return [];
+    const term = busqueda.trim().toLowerCase();
+    return data.cruces.filter((c) => {
+      // Filtro por categoría
+      if (filtro === "con-alertas" && c.senales.length === 0) return false;
+      if (filtro === "no-encontradas" && c.obra_encontrada) return false;
+      if (filtro === "paralizaciones" && c.dias_paralizado_en_periodo === 0) return false;
+      if (
+        filtro === "nominal-falla" &&
+        !(c.aplica_verif_nominal && c.nombre_coincide === false)
+      )
+        return false;
+      // Busqueda libre
+      if (term) {
+        const hay =
+          c.nombre_profesional.toLowerCase().includes(term) ||
+          (c.proyecto || "").toLowerCase().includes(term) ||
+          (c.cui || "").toLowerCase().includes(term) ||
+          (c.cargo_postulado || "").toLowerCase().includes(term);
+        if (!hay) return false;
+      }
+      return true;
+    });
+  }, [data, filtro, busqueda]);
 
   return (
     <>
@@ -282,7 +379,9 @@ function CruceInfoObrasView({
         <span className="block text-[0.75rem] text-outline mt-2 italic">
           Nota: InfoObras solo registra Supervisor y Residente nominalmente.
           Los demás Especialistas no se verifican con nombre — sí se cruza el
-          periodo y paralizaciones de la obra.
+          periodo y paralizaciones de la obra. El resultado queda{" "}
+          <strong>persistido en el job</strong>: las próximas visitas son
+          instantáneas.
         </span>
       </SectionDescription>
 
@@ -304,15 +403,36 @@ function CruceInfoObrasView({
             placeholder="ej: 488fdd76-..."
           />
         </div>
-        <SubmitButton
-          loading={loading}
-          disabled={!extractionJobId.trim() || !tdrJobId.trim()}
-          icon={loading ? "hourglass_top" : "compare_arrows"}
-          label={loading ? "Cruzando..." : "Ejecutar cruce InfoObras"}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <SubmitButton
+            loading={loading}
+            disabled={!extractionJobId.trim() || !tdrJobId.trim()}
+            icon={loading ? "hourglass_top" : data ? "cached" : "compare_arrows"}
+            label={
+              loading
+                ? "Cruzando..."
+                : data
+                  ? "Cargar resultado (cache)"
+                  : "Ejecutar cruce InfoObras"
+            }
+          />
+          {data && (
+            <button
+              type="button"
+              onClick={() => runCruce(extractionJobId, tdrJobId, true)}
+              disabled={loading}
+              className="text-sm font-semibold px-4 py-2.5 rounded-lg inline-flex items-center gap-2 border border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20 disabled:opacity-50"
+              title="Re-ejecuta el cruce ignorando cache"
+            >
+              <span className="material-symbols-outlined text-base">refresh</span>
+              Re-ejecutar (sin cache)
+            </button>
+          )}
+        </div>
         {loading && (
           <p className="text-xs text-on-surface-variant mt-3">
-            Esto puede tardar varios segundos por las consultas a InfoObras.
+            La primera ejecución consulta InfoObras (varios minutos).
+            Las siguientes visitas leen del cache en segundos.
           </p>
         )}
       </form>
@@ -321,23 +441,53 @@ function CruceInfoObrasView({
 
       {data && (
         <>
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {/* Banner de cache hit */}
+          {data.cached && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-lg p-3 mb-6 flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
+              <span className="material-symbols-outlined text-base">cached</span>
+              <span>
+                Resultado cargado del cache persistente del job.
+                {data.ejecutado_en && (
+                  <span className="ml-2 text-blue-600/80 dark:text-blue-400/80">
+                    Última ejecución: {fmtDateTime(data.ejecutado_en)}
+                  </span>
+                )}
+                <span className="ml-2 opacity-80">
+                  Usá &quot;Re-ejecutar&quot; para refrescar.
+                </span>
+              </span>
+            </div>
+          )}
+
+          <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
             <Metric label="Experiencias" value={data.total_experiencias} />
             <Metric label="CUIs consultados" value={data.cuis_consultados} />
             <Metric
-              label="Alertas totales"
-              value={data.total_alertas}
-              accent={data.total_alertas > 0}
+              label="Críticas"
+              value={metricsExtra?.criticas ?? 0}
+              accent={(metricsExtra?.criticas ?? 0) > 0}
             />
             <Metric
-              label="Obras no encontradas"
-              value={data.cuis_no_encontrados.length}
-              accent={data.cuis_no_encontrados.length > 0}
+              label="Observaciones"
+              value={metricsExtra?.observaciones ?? 0}
+              accent={(metricsExtra?.observaciones ?? 0) > 0}
+              tone="warning"
+            />
+            <Metric
+              label="Nominal falla"
+              value={metricsExtra?.infoNominalFalla ?? 0}
+              accent={(metricsExtra?.infoNominalFalla ?? 0) > 0}
+            />
+            <Metric
+              label="Con paralización"
+              value={metricsExtra?.conParalizacion ?? 0}
+              accent={(metricsExtra?.conParalizacion ?? 0) > 0}
+              tone="warning"
             />
           </section>
 
           {data.senales_globales.length > 0 && (
-            <section className="mb-8">
+            <section className="mb-6">
               <h3 className="text-sm font-bold text-primary mb-3">
                 Señales globales (entre profesionales del concurso)
               </h3>
@@ -349,124 +499,207 @@ function CruceInfoObrasView({
             </section>
           )}
 
-          <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
-            <div className="px-5 py-4 border-b border-outline-variant/10">
-              <h3 className="text-sm font-bold text-primary">
-                Detalle por experiencia ({data.cruces.length})
-              </h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-surface-container-high">
-                  <tr>
-                    {[
-                      "Profesional",
-                      "Cargo postulado",
-                      "Proyecto / Obra",
-                      "Periodo cert.",
-                      "Periodo InfoObras",
-                      "Match nombre",
-                      "Paraliz.",
-                      "Alertas",
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        className="px-3 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/10">
-                  {data.cruces.map((c, i) => (
-                    <tr
-                      key={i}
-                      className="align-top hover:bg-surface-container-high/40 transition-colors"
-                    >
-                      <td className="px-3 py-3 text-xs">
-                        <div className="font-semibold text-primary">
-                          {c.nombre_profesional}
-                        </div>
-                        {c.cargo_experiencia && (
-                          <div className="text-on-surface-variant mt-0.5 text-[0.7rem]">
-                            {c.cargo_experiencia}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-xs text-on-surface-variant max-w-[200px]">
-                        {c.cargo_postulado}
-                      </td>
-                      <td className="px-3 py-3 text-xs max-w-[280px]">
-                        <div className="text-on-surface-variant break-words leading-snug">
-                          {c.proyecto || "—"}
-                        </div>
-                        {c.cui && (
-                          <div className="text-[0.6875rem] font-mono text-outline mt-1">
-                            CUI: {c.cui}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-xs text-on-surface-variant whitespace-nowrap">
-                        {fmtDate(c.fecha_inicio_cert)} → {fmtDate(c.fecha_fin_cert)}
-                      </td>
-                      <td className="px-3 py-3 text-xs whitespace-nowrap">
-                        {c.obra_encontrada ? (
-                          <>
-                            <div className="text-on-surface-variant">
-                              {fmtDate(c.fecha_inicio_obra)} → {fmtDate(c.fecha_fin_obra)}
-                            </div>
-                            {c.estado_obra && (
-                              <div className="text-[0.6875rem] text-outline mt-0.5">
-                                {c.estado_obra}
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-outline italic">no encontrada</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-xs whitespace-nowrap">
-                        {c.aplica_verif_nominal ? (
-                          c.nombre_coincide ? (
-                            <span className="text-green-700 dark:text-green-400">
-                              ✓ {c.score_nombre?.toFixed(2)}
-                            </span>
-                          ) : (
-                            <span className="text-red-700 dark:text-red-300">
-                              ✗ {c.score_nombre?.toFixed(2)}
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-outline italic">N/A</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-xs text-center">
-                        {c.dias_paralizado_en_periodo > 0 ? (
-                          <span className="text-amber-700 dark:text-amber-300 font-semibold">
-                            {c.dias_paralizado_en_periodo}d
-                          </span>
-                        ) : (
-                          <span className="text-outline">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-xs max-w-[420px]">
-                        {c.senales.length === 0 ? (
-                          <span className="text-outline italic">sin alertas</span>
-                        ) : (
-                          <div className="space-y-1.5">
-                            {c.senales.map((s, j) => (
-                              <SenalCard key={j} senal={s} compact />
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Filtros + búsqueda */}
+          <section className="bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-4 mb-3 flex flex-wrap items-center gap-2">
+            <FilterChip
+              active={filtro === "all"}
+              onClick={() => setFiltro("all")}
+              label="Todas"
+              count={data.cruces.length}
+            />
+            <FilterChip
+              active={filtro === "con-alertas"}
+              onClick={() => setFiltro("con-alertas")}
+              label="Con alertas"
+              count={data.cruces.filter((c) => c.senales.length > 0).length}
+              tone="danger"
+            />
+            <FilterChip
+              active={filtro === "no-encontradas"}
+              onClick={() => setFiltro("no-encontradas")}
+              label="Obra no encontrada"
+              count={data.cruces.filter((c) => !c.obra_encontrada).length}
+              tone="muted"
+            />
+            <FilterChip
+              active={filtro === "paralizaciones"}
+              onClick={() => setFiltro("paralizaciones")}
+              label="Con paralización"
+              count={metricsExtra?.conParalizacion ?? 0}
+              tone="warning"
+            />
+            <FilterChip
+              active={filtro === "nominal-falla"}
+              onClick={() => setFiltro("nominal-falla")}
+              label="Nominal falla"
+              count={metricsExtra?.infoNominalFalla ?? 0}
+              tone="danger"
+            />
+            <div className="flex-1" />
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-base text-outline pointer-events-none">
+                search
+              </span>
+              <input
+                type="search"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar profesional, proyecto, CUI..."
+                className="pl-8 pr-3 py-1.5 text-xs bg-surface border border-outline-variant rounded-lg focus:border-primary focus:outline-none min-w-[240px]"
+              />
             </div>
           </section>
+
+          <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+            <div className="px-5 py-3 border-b border-outline-variant/10 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-primary">
+                Detalle por experiencia
+              </h3>
+              <span className="text-xs text-on-surface-variant">
+                Mostrando <strong>{crucesFiltrados.length}</strong> de{" "}
+                {data.cruces.length}
+              </span>
+            </div>
+            {crucesFiltrados.length === 0 ? (
+              <div className="p-8 text-center text-sm text-on-surface-variant">
+                Ninguna experiencia coincide con el filtro actual.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      {[
+                        "Profesional",
+                        "Cargo postulado",
+                        "Proyecto / Obra",
+                        "Periodo cert.",
+                        "Periodo InfoObras",
+                        "Match nombre",
+                        "Paraliz.",
+                        "Alertas",
+                      ].map((h) => (
+                        <th
+                          key={h}
+                          className="px-3 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant"
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/10">
+                    {crucesFiltrados.map((c, i) => (
+                      <tr
+                        key={i}
+                        className="align-top hover:bg-surface-container-high/40 transition-colors"
+                      >
+                        <td className="px-3 py-3 text-xs">
+                          <div className="font-semibold text-primary">
+                            {c.nombre_profesional}
+                          </div>
+                          {c.cargo_experiencia && (
+                            <div className="text-on-surface-variant mt-0.5 text-[0.7rem]">
+                              {c.cargo_experiencia}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-on-surface-variant max-w-[200px]">
+                          {c.cargo_postulado}
+                        </td>
+                        <td className="px-3 py-3 text-xs max-w-[280px]">
+                          <div className="text-on-surface-variant break-words leading-snug">
+                            {c.proyecto || "—"}
+                          </div>
+                          {c.cui && (
+                            <div className="text-[0.6875rem] font-mono text-outline mt-1">
+                              CUI: {c.cui}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-on-surface-variant whitespace-nowrap">
+                          {fmtDate(c.fecha_inicio_cert)} → {fmtDate(c.fecha_fin_cert)}
+                        </td>
+                        <td className="px-3 py-3 text-xs whitespace-nowrap">
+                          {c.obra_encontrada ? (
+                            <>
+                              <div className="text-on-surface-variant">
+                                {fmtDate(c.fecha_inicio_obra)} → {fmtDate(c.fecha_fin_obra)}
+                              </div>
+                              {c.estado_obra && (
+                                <div className="text-[0.6875rem] text-outline mt-0.5">
+                                  {c.estado_obra}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-outline italic">no encontrada</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs whitespace-nowrap">
+                          {c.aplica_verif_nominal ? (
+                            c.nombre_coincide ? (
+                              <span className="text-green-700 dark:text-green-400">
+                                ✓ {c.score_nombre?.toFixed(2)}
+                              </span>
+                            ) : (
+                              <span className="text-red-700 dark:text-red-300">
+                                ✗ {c.score_nombre?.toFixed(2)}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-outline italic">N/A</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-center">
+                          {c.dias_paralizado_en_periodo > 0 ? (
+                            <span
+                              className="text-amber-700 dark:text-amber-300 font-semibold"
+                              title={`${c.paralizaciones.length} mes(es)`}
+                            >
+                              {c.dias_paralizado_en_periodo}d
+                            </span>
+                          ) : (
+                            <span className="text-outline">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs max-w-[420px]">
+                          {c.senales.length === 0 ? (
+                            <span className="text-outline italic">sin alertas</span>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {c.senales.map((s, j) => (
+                                <SenalCard key={j} senal={s} compact />
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          {/* CUIs no encontrados (al final, colapsable) */}
+          {data.cuis_no_encontrados.length > 0 && (
+            <section className="mt-6 bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+              <h4 className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant mb-2">
+                CUIs no encontrados en InfoObras ({data.cuis_no_encontrados.length})
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {data.cuis_no_encontrados.map((cui) => (
+                  <code
+                    key={cui}
+                    className="px-2 py-1 bg-surface-container-high text-[0.7rem] font-mono rounded text-on-surface-variant"
+                  >
+                    {cui}
+                  </code>
+                ))}
+              </div>
+            </section>
+          )}
         </>
       )}
 
@@ -493,31 +726,95 @@ function CruceSunatView({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<CruceSunatResponse | null>(null);
+  const [filtro, setFiltro] = useState<FiltroSunat>("all");
+  const [busqueda, setBusqueda] = useState("");
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!extractionJobId.trim()) return;
-    setLoading(true);
-    setError(null);
-    setData(null);
+  const runCruce = useCallback(
+    async (extId: string, refresh = false) => {
+      if (!extId.trim()) return;
+      setLoading(true);
+      setError(null);
 
-    try {
-      const res = await fetch(
-        `/api/jobs/${extractionJobId.trim()}/cruce-sunat`,
-        { method: "POST" },
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.detail ?? `Error ${res.status}`);
+      try {
+        const url =
+          `/api/jobs/${extId.trim()}/cruce-sunat` +
+          (refresh ? "?refresh=true" : "");
+        const res = await fetch(url, { method: "POST" });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.detail ?? `Error ${res.status}`);
+        }
+        const json: CruceSunatResponse = await res.json();
+        setData(json);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Error al cruzar");
+      } finally {
+        setLoading(false);
       }
-      const json: CruceSunatResponse = await res.json();
-      setData(json);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al cruzar");
-    } finally {
-      setLoading(false);
+    },
+    [],
+  );
+
+  // Auto-cargar cache si llega un job_id por URL
+  useEffect(() => {
+    if (initialExtractionId && !data) {
+      runCruce(initialExtractionId, false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialExtractionId]);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    runCruce(extractionJobId, false);
   };
+
+  // Aplicar filtro + busqueda
+  const crucesFiltrados = useMemo(() => {
+    if (!data) return [];
+    const term = busqueda.trim().toLowerCase();
+    return data.cruces.filter((c) => {
+      // Filtros por categoria
+      if (filtro === "con-alertas" && c.senales.length === 0) return false;
+      if (
+        filtro === "alt04" &&
+        !c.senales.some((s) => s.codigo === "ALT04" || s.codigo === "ALT04_SUNAT")
+      )
+        return false;
+      if (
+        filtro === "mismatch" &&
+        !c.senales.some(
+          (s) => s.codigo === "MISMATCH_NOMBRE_RUC" || s.codigo === "RUC_DECLARADO_INCORRECTO",
+        )
+      )
+        return false;
+      if (
+        filtro === "baja" &&
+        !((c.empresa_sunat?.estado || "").toUpperCase().includes("BAJA"))
+      )
+        return false;
+      if (filtro === "sin-empresa" && c.empresa_sunat) return false;
+      if (filtro === "ambiguos" && c.candidatos_ambiguos.length === 0) return false;
+      // Busqueda libre
+      if (term) {
+        const hay =
+          c.profesional.toLowerCase().includes(term) ||
+          (c.empresa_declarada || "").toLowerCase().includes(term) ||
+          (c.empresa_sunat?.razon_social || "").toLowerCase().includes(term) ||
+          (c.ruc_declarado || "").toLowerCase().includes(term) ||
+          (c.ruc_resuelto || "").toLowerCase().includes(term);
+        if (!hay) return false;
+      }
+      return true;
+    });
+  }, [data, filtro, busqueda]);
+
+  const conBaja = useMemo(
+    () =>
+      data?.cruces.filter((c) =>
+        (c.empresa_sunat?.estado || "").toUpperCase().includes("BAJA"),
+      ).length ?? 0,
+    [data],
+  );
 
   return (
     <>
@@ -529,7 +826,9 @@ function CruceSunatView({
         empresas en estado de baja.
         <span className="block text-[0.75rem] text-outline mt-2 italic">
           Lookup: 1) por RUC declarado si existe, 2) fallback fuzzy por razón
-          social. Cache persistente con TTL 30 días.
+          social. Cache persistente con TTL 30 días. El resultado queda{" "}
+          <strong>persistido en el job</strong>: las próximas visitas son
+          instantáneas.
         </span>
       </SectionDescription>
 
@@ -545,12 +844,32 @@ function CruceSunatView({
             placeholder="ej: e09f58ba-..."
           />
         </div>
-        <SubmitButton
-          loading={loading}
-          disabled={!extractionJobId.trim()}
-          icon={loading ? "hourglass_top" : "storefront"}
-          label={loading ? "Consultando SUNAT..." : "Ejecutar cruce SUNAT"}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <SubmitButton
+            loading={loading}
+            disabled={!extractionJobId.trim()}
+            icon={loading ? "hourglass_top" : data ? "cached" : "storefront"}
+            label={
+              loading
+                ? "Consultando SUNAT..."
+                : data
+                  ? "Cargar resultado (cache)"
+                  : "Ejecutar cruce SUNAT"
+            }
+          />
+          {data && (
+            <button
+              type="button"
+              onClick={() => runCruce(extractionJobId, true)}
+              disabled={loading}
+              className="text-sm font-semibold px-4 py-2.5 rounded-lg inline-flex items-center gap-2 border border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20 disabled:opacity-50"
+              title="Re-ejecuta el cruce ignorando cache de job (SUNAT igual usa cache de 30d a nivel RUC)"
+            >
+              <span className="material-symbols-outlined text-base">refresh</span>
+              Re-ejecutar (sin cache)
+            </button>
+          )}
+        </div>
         {loading && (
           <p className="text-xs text-on-surface-variant mt-3">
             La primera consulta de cada RUC es lenta (~2s). Las siguientes
@@ -563,6 +882,24 @@ function CruceSunatView({
 
       {data && (
         <>
+          {/* Banner de cache hit */}
+          {data.cached && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-lg p-3 mb-6 flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
+              <span className="material-symbols-outlined text-base">cached</span>
+              <span>
+                Resultado cargado del cache persistente del job.
+                {data.ejecutado_en && (
+                  <span className="ml-2 text-blue-600/80 dark:text-blue-400/80">
+                    Última ejecución: {fmtDateTime(data.ejecutado_en)}
+                  </span>
+                )}
+                <span className="ml-2 opacity-80">
+                  Usá &quot;Re-ejecutar&quot; para refrescar.
+                </span>
+              </span>
+            </div>
+          )}
+
           {/* Métricas principales */}
           <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <Metric label="Experiencias" value={data.total_experiencias} />
@@ -580,7 +917,7 @@ function CruceSunatView({
           </section>
 
           {/* Métricas de cache + ambiguos */}
-          <section className="grid grid-cols-3 gap-4 mb-8">
+          <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <Metric label="Consultas live" value={data.rucs_consultados} muted />
             <Metric
               label="Servidos de cache"
@@ -591,16 +928,96 @@ function CruceSunatView({
               label="Ambiguos (req. humano)"
               value={data.total_ambiguos}
               accent={data.total_ambiguos > 0}
+              tone="warning"
             />
+            <Metric
+              label="Empresas en BAJA"
+              value={conBaja}
+              accent={conBaja > 0}
+            />
+          </section>
+
+          {/* Filtros + búsqueda */}
+          <section className="bg-surface-container-lowest border border-outline-variant/10 rounded-xl p-4 mb-3 flex flex-wrap items-center gap-2">
+            <FilterChip
+              active={filtro === "all"}
+              onClick={() => setFiltro("all")}
+              label="Todas"
+              count={data.cruces.length}
+            />
+            <FilterChip
+              active={filtro === "con-alertas"}
+              onClick={() => setFiltro("con-alertas")}
+              label="Con alertas"
+              count={data.cruces.filter((c) => c.senales.length > 0).length}
+              tone="danger"
+            />
+            <FilterChip
+              active={filtro === "alt04"}
+              onClick={() => setFiltro("alt04")}
+              label="ALT04"
+              count={data.total_alt04}
+              tone="danger"
+            />
+            <FilterChip
+              active={filtro === "mismatch"}
+              onClick={() => setFiltro("mismatch")}
+              label="Mismatch RUC↔nombre"
+              count={data.total_mismatches}
+              tone="danger"
+            />
+            <FilterChip
+              active={filtro === "baja"}
+              onClick={() => setFiltro("baja")}
+              label="En BAJA"
+              count={conBaja}
+              tone="danger"
+            />
+            <FilterChip
+              active={filtro === "ambiguos"}
+              onClick={() => setFiltro("ambiguos")}
+              label="Ambiguos"
+              count={data.total_ambiguos}
+              tone="warning"
+            />
+            <FilterChip
+              active={filtro === "sin-empresa"}
+              onClick={() => setFiltro("sin-empresa")}
+              label="Sin empresa"
+              count={data.cruces.filter((c) => !c.empresa_sunat).length}
+              tone="muted"
+            />
+            <div className="flex-1" />
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-base text-outline pointer-events-none">
+                search
+              </span>
+              <input
+                type="search"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar profesional, empresa, RUC..."
+                className="pl-8 pr-3 py-1.5 text-xs bg-surface border border-outline-variant rounded-lg focus:border-primary focus:outline-none min-w-[240px]"
+              />
+            </div>
           </section>
 
           {/* Tabla detallada */}
           <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
-            <div className="px-5 py-4 border-b border-outline-variant/10">
+            <div className="px-5 py-3 border-b border-outline-variant/10 flex items-center justify-between">
               <h3 className="text-sm font-bold text-primary">
-                Detalle por experiencia ({data.cruces.length})
+                Detalle por experiencia
               </h3>
+              <span className="text-xs text-on-surface-variant">
+                Mostrando <strong>{crucesFiltrados.length}</strong> de{" "}
+                {data.cruces.length}
+              </span>
             </div>
+            {crucesFiltrados.length === 0 ? (
+              <div className="p-8 text-center text-sm text-on-surface-variant">
+                Ninguna experiencia coincide con el filtro actual.
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-surface-container-high">
@@ -626,7 +1043,7 @@ function CruceSunatView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/10">
-                  {data.cruces.map((c, i) => (
+                  {crucesFiltrados.map((c, i) => (
                     <tr
                       key={i}
                       className="align-top hover:bg-surface-container-high/40 transition-colors"
@@ -762,6 +1179,7 @@ function CruceSunatView({
                 </tbody>
               </table>
             </div>
+            )}
           </section>
 
           {/* RUCs no encontrados */}
@@ -919,17 +1337,29 @@ function Metric({
   value,
   accent = false,
   muted = false,
+  tone = "danger",
 }: {
   label: string;
   value: number;
   accent?: boolean;
   muted?: boolean;
+  tone?: "danger" | "warning";
 }) {
+  const accentColor =
+    tone === "warning"
+      ? "text-amber-700 dark:text-amber-400"
+      : "text-red-700 dark:text-red-400";
+  const borderColor =
+    muted
+      ? "border-outline-variant/40"
+      : accent
+        ? tone === "warning"
+          ? "border-amber-500"
+          : "border-red-500"
+        : "border-primary";
   return (
     <div
-      className={`bg-surface-container-lowest p-4 border-l-4 ${
-        muted ? "border-outline-variant/40" : "border-primary"
-      } shadow-ambient rounded-xl`}
+      className={`bg-surface-container-lowest p-4 border-l-4 ${borderColor} shadow-ambient rounded-xl`}
     >
       <p className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-on-surface-variant">
         {label}
@@ -937,7 +1367,7 @@ function Metric({
       <p
         className={`text-2xl font-bold mt-1 ${
           accent
-            ? "text-red-700 dark:text-red-400"
+            ? accentColor
             : muted
               ? "text-on-surface-variant"
               : "text-primary"
@@ -946,6 +1376,58 @@ function Metric({
         {value}
       </p>
     </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  label,
+  count,
+  tone = "neutral",
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  tone?: "neutral" | "danger" | "warning" | "muted";
+}) {
+  const baseTone =
+    tone === "danger"
+      ? "text-red-700 dark:text-red-300"
+      : tone === "warning"
+        ? "text-amber-700 dark:text-amber-300"
+        : tone === "muted"
+          ? "text-on-surface-variant"
+          : "text-primary";
+  const activeBg =
+    tone === "danger"
+      ? "bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-800/60"
+      : tone === "warning"
+        ? "bg-amber-100 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800/60"
+        : tone === "muted"
+          ? "bg-surface-container-high border-outline-variant/30"
+          : "bg-primary/10 dark:bg-primary/20 border-primary/40";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={count === 0 && !active}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+        active
+          ? `${activeBg} ${baseTone}`
+          : "bg-surface-container border-outline-variant/20 text-on-surface-variant hover:bg-surface-container-high"
+      } ${count === 0 && !active ? "opacity-40 cursor-not-allowed" : ""}`}
+    >
+      <span>{label}</span>
+      <span
+        className={`text-[0.6875rem] px-1.5 py-0.5 rounded-full ${
+          active ? "bg-white/40 dark:bg-black/30" : "bg-surface-container-high"
+        } ${baseTone}`}
+      >
+        {count}
+      </span>
+    </button>
   );
 }
 

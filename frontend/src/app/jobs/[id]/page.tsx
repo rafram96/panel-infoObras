@@ -683,8 +683,26 @@ export default function JobDetailPage({
 
             {activeTab === "profesionales" && (
               <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
-                <div className="px-5 py-4 border-b border-outline-variant/10">
+                <div className="px-5 py-4 border-b border-outline-variant/10 flex items-center justify-between gap-3 flex-wrap">
                   <h2 className="text-sm font-semibold text-primary">Profesionales Detectados</h2>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/herramientas/profesionales?tab=sunat&extraction_job_id=${id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
+                      title="Cruzar contra SUNAT y ver tabla completa"
+                    >
+                      <span className="material-symbols-outlined text-base">storefront</span>
+                      Cruzar SUNAT
+                    </Link>
+                    <Link
+                      href={`/herramientas/profesionales?tab=infoobras&extraction_job_id=${id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-indigo-500/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
+                      title="Cruzar contra InfoObras y ver tabla completa"
+                    >
+                      <span className="material-symbols-outlined text-base">domain</span>
+                      Cruzar InfoObras
+                    </Link>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
@@ -1525,22 +1543,27 @@ function ProfessionalRow({
 
 
 // ── ExperienciaRow ──────────────────────────────────────────────────────────
-// Fila clickeable que expande con el detalle SUNAT (razon social, fecha
-// inscripcion, estado, senales, candidatos ambiguos).
+// Fila clickeable que expande con el detalle SUNAT + InfoObras + alertas motor.
 function ExperienciaRow({ exp }: { exp: Experiencia }) {
   const [open, setOpen] = useState(false);
   const cruce = exp.cruce_sunat;
   const empresa = cruce?.empresa_sunat;
+  const infoobras = exp.cruce_infoobras;
   const alertasMotor = exp.alertas_motor || [];
 
   // Badge prioritario: ALT11/ALT04 críticas del motor > critica SUNAT >
-  // observacion > OK > sin cruce
+  // critica InfoObras > observaciones > OK > sin cruce
   const alertaMotorCritica = alertasMotor.find((a) => a.severidad === "critica");
   const senalCritica = cruce?.senales?.find((s) => s.severidad === "critica");
+  const senalInfoCritica = infoobras?.senales?.find((s) => s.severidad === "critica");
   const senalObs = cruce?.senales?.find((s) => s.severidad === "observacion");
+  const senalInfoObs = infoobras?.senales?.find((s) => s.severidad === "observacion");
   const alertaMotorObs = alertasMotor.find((a) => a.severidad === "observacion");
-  // Contar todas las alertas (motor + sunat) para mostrar total
-  const totalAlertas = alertasMotor.length + (cruce?.senales?.length ?? 0);
+  // Contar todas las alertas (motor + sunat + infoobras) para mostrar total
+  const totalAlertas =
+    alertasMotor.length +
+    (cruce?.senales?.length ?? 0) +
+    (infoobras?.senales?.length ?? 0);
 
   let badge: { icon: string; cls: string; code: string; title: string };
   if (alertaMotorCritica) {
@@ -1557,6 +1580,13 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
       code: senalCritica.codigo,
       title: alertTitle(senalCritica.codigo),
     };
+  } else if (senalInfoCritica) {
+    badge = {
+      icon: "domain_disabled",
+      cls: "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300",
+      code: "",
+      title: alertTitle(senalInfoCritica.fuente),
+    };
   } else if (alertaMotorObs) {
     badge = {
       icon: "warning",
@@ -1571,14 +1601,21 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
       code: senalObs.codigo,
       title: alertTitle(senalObs.codigo),
     };
-  } else if (!cruce && alertasMotor.length === 0) {
+  } else if (senalInfoObs) {
+    badge = {
+      icon: "domain",
+      cls: "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300",
+      code: "",
+      title: alertTitle(senalInfoObs.fuente),
+    };
+  } else if (!cruce && !infoobras && alertasMotor.length === 0) {
     badge = {
       icon: "horizontal_rule",
       cls: "text-outline",
       code: "",
       title: "Sin verificación",
     };
-  } else if (empresa?.razon_social || alertasMotor.length === 0) {
+  } else if (empresa?.razon_social || infoobras?.obra_encontrada || alertasMotor.length === 0) {
     badge = {
       icon: "check_circle",
       cls: "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400",
@@ -1678,178 +1715,308 @@ function ExperienciaRow({ exp }: { exp: Experiencia }) {
               </div>
             )}
 
-            {!cruce ? (
+            {!cruce && !infoobras ? (
               <div className="text-xs text-on-surface-variant italic">
-                Esta experiencia no fue cruzada con SUNAT todavia. Re-corre el
-                job o usa el endpoint /api/jobs/{"{id}"}/cruce-sunat manualmente.
+                Esta experiencia no fue cruzada con SUNAT ni InfoObras todavia.
+                Usa los endpoints{" "}
+                <code className="font-mono">/cruce-sunat</code> y{" "}
+                <code className="font-mono">/cruce-infoobras</code> desde{" "}
+                <Link href="/herramientas/profesionales" className="text-primary underline">
+                  Herramientas
+                </Link>
+                .
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Datos SUNAT */}
-                <div className="space-y-2">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                    Verificacion SUNAT
-                  </div>
-                  {empresa ? (
-                    <div className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 space-y-1.5 text-xs">
-                      <div>
-                        <span className="text-outline">Razon social: </span>
-                        <span className="font-semibold text-on-surface">
-                          {empresa.razon_social || "—"}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* ── Bloque SUNAT ──────────────────────────────────────── */}
+                {cruce && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className="material-symbols-outlined text-sm text-emerald-700 dark:text-emerald-400">
+                        storefront
+                      </span>
+                      SUNAT
+                      {cruce.senales && cruce.senales.length > 0 && (
+                        <span className="ml-auto text-[9px] bg-surface-container-high px-1.5 py-0.5 rounded text-on-surface-variant normal-case tracking-normal">
+                          {cruce.senales.length} señal{cruce.senales.length === 1 ? "" : "es"}
                         </span>
-                      </div>
-                      {empresa.nombre_comercial && (
-                        <div>
-                          <span className="text-outline">Nombre comercial: </span>
-                          <span className="text-on-surface">
-                            {empresa.nombre_comercial}
-                          </span>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-outline">RUC: </span>
-                        <span className="font-mono">{empresa.ruc}</span>
-                        {cruce.ruc_resuelto &&
-                          cruce.ruc_declarado &&
-                          cruce.ruc_resuelto !== cruce.ruc_declarado && (
-                            <span className="ml-2 text-amber-700 dark:text-amber-300 text-[10px]">
-                              (declarado: {cruce.ruc_declarado})
-                            </span>
-                          )}
-                      </div>
-                      <div>
-                        <span className="text-outline">Inscrita: </span>
-                        <span className="text-on-surface">
-                          {empresa.fecha_inscripcion || "—"}
-                        </span>
-                      </div>
-                      {empresa.fecha_inicio_actividades && (
-                        <div>
-                          <span className="text-outline">Inicio actividades: </span>
-                          <span className="text-on-surface">
-                            {empresa.fecha_inicio_actividades}
-                          </span>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-outline">Estado: </span>
-                        <span
-                          className={
-                            (empresa.estado || "").toUpperCase().includes("BAJA")
-                              ? "text-red-700 dark:text-red-300 font-semibold"
-                              : "text-green-700 dark:text-green-400"
-                          }
-                        >
-                          {empresa.estado || "—"}
-                        </span>
-                        {empresa.condicion && (
-                          <span className="ml-2 text-outline text-[10px]">
-                            ({empresa.condicion})
-                          </span>
-                        )}
-                      </div>
-                      {empresa.domicilio_fiscal && (
-                        <div>
-                          <span className="text-outline">Domicilio: </span>
-                          <span className="text-on-surface text-[11px]">
-                            {empresa.domicilio_fiscal}
-                          </span>
-                        </div>
-                      )}
-                      {cruce.score_match_nombre !== null && (
-                        <div>
-                          <span className="text-outline">Match nombre: </span>
-                          <span
-                            className={
-                              cruce.score_match_nombre >= 85
-                                ? "text-green-700 dark:text-green-400 font-semibold"
-                                : cruce.score_match_nombre >= 70
-                                  ? "text-amber-700 dark:text-amber-300 font-semibold"
-                                  : "text-red-700 dark:text-red-300 font-semibold"
-                            }
-                          >
-                            {cruce.score_match_nombre}/100
-                          </span>
-                        </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="text-xs text-on-surface-variant italic bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3">
-                      Empresa no encontrada en SUNAT.
-                    </div>
-                  )}
-                </div>
-
-                {/* Senales / alertas + candidatos ambiguos */}
-                <div className="space-y-2">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                    Senales ({cruce.senales?.length ?? 0})
-                  </div>
-                  {!cruce.senales || cruce.senales.length === 0 ? (
-                    <div className="text-xs text-on-surface-variant italic bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3">
-                      Sin alertas para esta experiencia.
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {cruce.senales.map((s, si) => (
-                        <div
-                          key={si}
-                          className={`text-[11px] leading-snug border-l-2 px-2.5 py-1.5 rounded-r ${senalClass(
-                            s.severidad,
-                          )}`}
-                        >
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="font-bold text-[10px] opacity-90 font-mono">
-                              {s.codigo}
-                            </span>
-                            <span className="text-[10px] opacity-70">·</span>
-                            <span className="font-semibold text-[10px]">
-                              {alertTitle(s.codigo)}
+                    {empresa ? (
+                      <div className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 space-y-1.5 text-xs">
+                        <div>
+                          <span className="text-outline">Razon social: </span>
+                          <span className="font-semibold text-on-surface">
+                            {empresa.razon_social || "—"}
+                          </span>
+                        </div>
+                        {empresa.nombre_comercial && (
+                          <div>
+                            <span className="text-outline">Nombre comercial: </span>
+                            <span className="text-on-surface">
+                              {empresa.nombre_comercial}
                             </span>
                           </div>
-                          <div className="opacity-90">{s.mensaje}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {cruce.candidatos_ambiguos &&
-                    cruce.candidatos_ambiguos.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-outline-variant/20">
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-300 mb-1.5">
-                          Candidatos ambiguos
-                        </div>
-                        <div className="space-y-1">
-                          {cruce.candidatos_ambiguos.map((c, ci) => (
-                            <div
-                              key={ci}
-                              className="text-[11px] flex items-start gap-2 bg-surface-container-lowest border border-outline-variant/20 px-2 py-1 rounded"
-                            >
-                              <span
-                                className={`shrink-0 font-mono w-8 font-semibold ${
-                                  c.score >= 85
-                                    ? "text-green-700 dark:text-green-400"
-                                    : c.score >= 70
-                                      ? "text-amber-700 dark:text-amber-300"
-                                      : "text-red-700 dark:text-red-300"
-                                }`}
-                              >
-                                {c.score}
+                        )}
+                        <div>
+                          <span className="text-outline">RUC: </span>
+                          <span className="font-mono">{empresa.ruc}</span>
+                          {cruce.ruc_resuelto &&
+                            cruce.ruc_declarado &&
+                            cruce.ruc_resuelto !== cruce.ruc_declarado && (
+                              <span className="ml-2 text-amber-700 dark:text-amber-300 text-[10px]">
+                                (declarado: {cruce.ruc_declarado})
                               </span>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-mono text-outline text-[10px]">
-                                  {c.ruc}
-                                </div>
-                                <div className="text-on-surface-variant leading-tight">
-                                  {c.razon_social}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                            )}
                         </div>
+                        <div>
+                          <span className="text-outline">Inscrita: </span>
+                          <span className="text-on-surface">
+                            {empresa.fecha_inscripcion || "—"}
+                          </span>
+                        </div>
+                        {empresa.fecha_inicio_actividades && (
+                          <div>
+                            <span className="text-outline">Inicio actividades: </span>
+                            <span className="text-on-surface">
+                              {empresa.fecha_inicio_actividades}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-outline">Estado: </span>
+                          <span
+                            className={
+                              (empresa.estado || "").toUpperCase().includes("BAJA")
+                                ? "text-red-700 dark:text-red-300 font-semibold"
+                                : "text-green-700 dark:text-green-400"
+                            }
+                          >
+                            {empresa.estado || "—"}
+                          </span>
+                          {empresa.condicion && (
+                            <span className="ml-2 text-outline text-[10px]">
+                              ({empresa.condicion})
+                            </span>
+                          )}
+                        </div>
+                        {empresa.domicilio_fiscal && (
+                          <div>
+                            <span className="text-outline">Domicilio: </span>
+                            <span className="text-on-surface text-[11px]">
+                              {empresa.domicilio_fiscal}
+                            </span>
+                          </div>
+                        )}
+                        {cruce.score_match_nombre !== null && (
+                          <div>
+                            <span className="text-outline">Match nombre: </span>
+                            <span
+                              className={
+                                cruce.score_match_nombre >= 85
+                                  ? "text-green-700 dark:text-green-400 font-semibold"
+                                  : cruce.score_match_nombre >= 70
+                                    ? "text-amber-700 dark:text-amber-300 font-semibold"
+                                    : "text-red-700 dark:text-red-300 font-semibold"
+                              }
+                            >
+                              {cruce.score_match_nombre}/100
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-on-surface-variant italic bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3">
+                        Empresa no encontrada en SUNAT.
                       </div>
                     )}
-                </div>
+
+                    {/* Señales SUNAT */}
+                    {cruce.senales && cruce.senales.length > 0 && (
+                      <div className="space-y-1.5">
+                        {cruce.senales.map((s, si) => (
+                          <div
+                            key={si}
+                            className={`text-[11px] leading-snug border-l-2 px-2.5 py-1.5 rounded-r ${senalClass(
+                              s.severidad,
+                            )}`}
+                          >
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="font-bold text-[10px] opacity-90 font-mono">
+                                {s.codigo}
+                              </span>
+                              <span className="text-[10px] opacity-70">·</span>
+                              <span className="font-semibold text-[10px]">
+                                {alertTitle(s.codigo)}
+                              </span>
+                            </div>
+                            <div className="opacity-90">{s.mensaje}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Candidatos ambiguos SUNAT */}
+                    {cruce.candidatos_ambiguos &&
+                      cruce.candidatos_ambiguos.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-outline-variant/20">
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-300 mb-1.5">
+                            Candidatos ambiguos
+                          </div>
+                          <div className="space-y-1">
+                            {cruce.candidatos_ambiguos.map((c, ci) => (
+                              <div
+                                key={ci}
+                                className="text-[11px] flex items-start gap-2 bg-surface-container-lowest border border-outline-variant/20 px-2 py-1 rounded"
+                              >
+                                <span
+                                  className={`shrink-0 font-mono w-8 font-semibold ${
+                                    c.score >= 85
+                                      ? "text-green-700 dark:text-green-400"
+                                      : c.score >= 70
+                                        ? "text-amber-700 dark:text-amber-300"
+                                        : "text-red-700 dark:text-red-300"
+                                  }`}
+                                >
+                                  {c.score}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-mono text-outline text-[10px]">
+                                    {c.ruc}
+                                  </div>
+                                  <div className="text-on-surface-variant leading-tight">
+                                    {c.razon_social}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                )}
+
+                {/* ── Bloque InfoObras ──────────────────────────────────── */}
+                {infoobras && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className="material-symbols-outlined text-sm text-indigo-700 dark:text-indigo-400">
+                        domain
+                      </span>
+                      InfoObras (Contraloría)
+                      {infoobras.senales && infoobras.senales.length > 0 && (
+                        <span className="ml-auto text-[9px] bg-surface-container-high px-1.5 py-0.5 rounded text-on-surface-variant normal-case tracking-normal">
+                          {infoobras.senales.length} señal{infoobras.senales.length === 1 ? "" : "es"}
+                        </span>
+                      )}
+                    </div>
+
+                    {infoobras.obra_encontrada ? (
+                      <div className="bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3 space-y-1.5 text-xs">
+                        {infoobras.cui && (
+                          <div>
+                            <span className="text-outline">CUI: </span>
+                            <span className="font-mono">{infoobras.cui}</span>
+                          </div>
+                        )}
+                        {infoobras.nombre_obra_infoobras && (
+                          <div>
+                            <span className="text-outline">Obra: </span>
+                            <span className="font-semibold text-on-surface leading-snug">
+                              {infoobras.nombre_obra_infoobras}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <span className="text-outline">Periodo obra: </span>
+                          <span className="text-on-surface">
+                            {infoobras.fecha_inicio_obra || "—"} →{" "}
+                            {infoobras.fecha_fin_obra || "—"}
+                          </span>
+                        </div>
+                        {infoobras.estado_obra && (
+                          <div>
+                            <span className="text-outline">Estado: </span>
+                            <span className="text-on-surface">{infoobras.estado_obra}</span>
+                          </div>
+                        )}
+                        {infoobras.aplica_verif_nominal && (
+                          <div className="pt-1 mt-1 border-t border-outline-variant/20">
+                            <span className="text-outline">Verif. nominal: </span>
+                            {infoobras.nombre_coincide ? (
+                              <span className="text-green-700 dark:text-green-400 font-semibold">
+                                ✓ coincide
+                                {infoobras.score_nombre !== null &&
+                                  ` (${infoobras.score_nombre.toFixed(2)})`}
+                              </span>
+                            ) : (
+                              <span className="text-red-700 dark:text-red-300 font-semibold">
+                                ✗ no coincide
+                                {infoobras.score_nombre !== null &&
+                                  ` (${infoobras.score_nombre.toFixed(2)})`}
+                              </span>
+                            )}
+                            {infoobras.nombre_encontrado_infoobras && (
+                              <div className="text-[10px] text-outline mt-0.5">
+                                InfoObras: {infoobras.nombre_encontrado_infoobras}
+                              </div>
+                            )}
+                            {infoobras.periodo_valido === false && (
+                              <div className="text-[10px] text-red-700 dark:text-red-300 mt-0.5">
+                                Periodo del certificado fuera del registrado oficialmente
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {infoobras.dias_paralizado_en_periodo > 0 && (
+                          <div className="pt-1 mt-1 border-t border-outline-variant/20">
+                            <span className="text-outline">Paralizaciones: </span>
+                            <span className="text-amber-700 dark:text-amber-300 font-semibold">
+                              {infoobras.dias_paralizado_en_periodo} días
+                            </span>
+                            <span className="text-outline text-[10px]">
+                              {" "}
+                              ({infoobras.paralizaciones.length} mes
+                              {infoobras.paralizaciones.length === 1 ? "" : "es"})
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-on-surface-variant italic bg-surface-container-lowest border border-outline-variant/20 rounded-lg p-3">
+                        {infoobras.cui ? (
+                          <>
+                            Obra con CUI <span className="font-mono">{infoobras.cui}</span>{" "}
+                            no encontrada en InfoObras.
+                          </>
+                        ) : (
+                          "Esta experiencia no tiene CUI declarado para cruzar."
+                        )}
+                      </div>
+                    )}
+
+                    {/* Señales InfoObras */}
+                    {infoobras.senales && infoobras.senales.length > 0 && (
+                      <div className="space-y-1.5">
+                        {infoobras.senales.map((s, si) => (
+                          <div
+                            key={si}
+                            className={`text-[11px] leading-snug border-l-2 px-2.5 py-1.5 rounded-r ${senalClass(
+                              s.severidad,
+                            )}`}
+                          >
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="font-semibold text-[10px] opacity-90">
+                                {alertTitle(s.fuente)}
+                              </span>
+                            </div>
+                            <div className="opacity-90">{s.mensaje}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </td>

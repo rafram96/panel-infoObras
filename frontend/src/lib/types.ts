@@ -64,6 +64,49 @@ export interface CruceSUNATPorExp {
   senales: SenalSimple[];
 }
 
+// ── Cruce InfoObras (Contraloría) ─────────────────────────────────────────
+export interface ParalizacionInfoObras {
+  anio: number;
+  mes: number;
+  estado: string;
+  tipo?: string | null;
+  dias: number;
+  causal?: string | null;
+}
+
+export interface SenalInfoObras {
+  severidad: "critica" | "observacion" | "informativa";
+  fuente: string;          // "infoobras_paralizacion" | "infoobras_nominal" | "cv_interno"
+  mensaje: string;
+}
+
+export interface CruceInfoObrasPorExp {
+  nombre_profesional: string;
+  cargo_postulado: string;
+  proyecto: string;
+  cargo_experiencia: string | null;
+  cui: string | null;
+  folio: string | null;
+  fecha_inicio_cert: string | null;
+  fecha_fin_cert: string | null;
+
+  obra_encontrada: boolean;
+  nombre_obra_infoobras: string | null;
+  fecha_inicio_obra: string | null;
+  fecha_fin_obra: string | null;
+  estado_obra: string | null;
+
+  aplica_verif_nominal: boolean;
+  nombre_coincide: boolean | null;
+  score_nombre: number | null;
+  nombre_encontrado_infoobras: string | null;
+  periodo_valido: boolean | null;
+
+  paralizaciones: ParalizacionInfoObras[];
+  dias_paralizado_en_periodo: number;
+  senales: SenalInfoObras[];
+}
+
 export interface AlertaMotor {
   codigo: string;        // ALT01..ALT11
   severidad: "critica" | "observacion";
@@ -96,6 +139,10 @@ export const ALERT_TITLES: Record<string, string> = {
   NO_ENCONTRADO_POR_NOMBRE: "Empresa no encontrada",
   SIN_RUC: "Sin RUC declarado",
   SIN_DATOS_EMPRESA: "Sin datos de empresa",
+  // Señales InfoObras (fuente texto, no códigos)
+  infoobras_paralizacion: "Paralización en periodo",
+  infoobras_nominal: "Verificación nominal InfoObras",
+  cv_interno: "Validación interna CV",
 };
 
 export function alertTitle(codigo: string): string {
@@ -119,6 +166,9 @@ export interface Experiencia {
   // Inyectado por _run_full_job tras cruce SUNAT. Puede ser null si el cruce
   // no se ejecuto (job de extraction sin bases) o si SUNAT fallo.
   cruce_sunat?: CruceSUNATPorExp | null;
+  // Inyectado por POST /api/jobs/{id}/cruce-infoobras (cache-on-write).
+  // Null si nunca se ejecuto el cruce o si la obra/CUI no existia.
+  cruce_infoobras?: CruceInfoObrasPorExp | null;
   // Inyectado por _run_full_job tras motor de reglas (Paso 4).
   // Lista de alertas ALT01..ALT11 que aplican a esta experiencia.
   alertas_motor?: AlertaMotor[];
