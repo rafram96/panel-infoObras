@@ -168,6 +168,151 @@ function FilaEtapa({ res, nombre, abierta, onToggle }: {
   );
 }
 
+// ── extracción: profesionales + experiencias (patrón del panel legacy) ──────
+interface ExpBreve {
+  n: number; proyecto: string; entidad_emisora: string; cargo_ocupado: string;
+  fecha_inicial: string; fecha_final: string; dias: number | null;
+  cui?: string | null; incluye_covid?: string; traslape?: string | null; folio?: string;
+}
+interface ProfBreve {
+  n_prof: number; cargo: string; nombre: string; colegiatura?: string;
+  cumple?: string | null; total?: { dias?: number; anios?: number };
+  experiencias: ExpBreve[];
+}
+
+function FilaProfesional({ prof }: { prof: ProfBreve }) {
+  const [expanded, setExpanded] = useState(false);
+  const sinVeredicto = !prof.cumple;
+  const noCumple = (prof.cumple ?? "").toUpperCase().includes("NO CUMPLE");
+
+  return (
+    <>
+      <tr
+        onClick={() => setExpanded((v) => !v)}
+        className="hover:bg-surface-container-high/40 transition-colors cursor-pointer"
+      >
+        <td className="px-3 py-2 text-xs font-mono text-secondary">{prof.n_prof}</td>
+        <td className="px-3 py-2">
+          <span className="text-sm font-medium text-primary">{prof.cargo}</span>
+        </td>
+        <td className="px-3 py-2 text-sm text-on-surface">{prof.nombre}</td>
+        <td className="px-3 py-2 text-xs text-secondary">{prof.colegiatura ?? "—"}</td>
+        <td className="px-3 py-2 text-xs text-secondary tabular-nums">{prof.experiencias.length}</td>
+        <td className="px-3 py-2 text-xs text-secondary tabular-nums">
+          {prof.total?.anios != null ? prof.total.anios.toFixed(2) : "—"}
+        </td>
+        <td className="px-3 py-2">
+          {sinVeredicto ? (
+            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+              Pendiente
+            </span>
+          ) : noCumple ? (
+            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">
+              No cumple
+            </span>
+          ) : (
+            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300">
+              Cumple
+            </span>
+          )}
+        </td>
+        <td className="px-3 py-2 text-right">
+          <span className={`material-symbols-outlined text-outline text-[18px] transition-transform ${expanded ? "rotate-180" : ""}`}>
+            expand_more
+          </span>
+        </td>
+      </tr>
+
+      {expanded && (
+        <tr>
+          <td colSpan={8} className="px-3 py-0">
+            <div className="py-3 px-4 mb-2 bg-surface-container-low rounded-lg space-y-4"
+              style={{ animation: "fadeIn 0.2s ease-out" }}>
+              {/* Datos del profesional */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">person</span>
+                  Datos del profesional
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  {[
+                    { label: "Nombre", value: prof.nombre },
+                    { label: "Colegiatura", value: prof.colegiatura },
+                    { label: "Total días (brutos)", value: prof.total?.dias != null ? String(prof.total.dias) : undefined },
+                    { label: "Veredicto", value: prof.cumple ?? "pendiente de revisión" },
+                  ].map(({ label, value }) => (
+                    <div key={label}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+                      <p className="text-on-surface font-medium">
+                        {value || <span className="text-slate-300">—</span>}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Experiencias */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">description</span>
+                  Experiencias ({prof.experiencias.length})
+                </p>
+                <div className="bg-surface-container-lowest rounded-lg overflow-hidden border border-outline-variant/10">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-surface-container-high">
+                      <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                        <th className="px-3 py-1.5">#</th>
+                        <th className="px-3 py-1.5">Proyecto u obra</th>
+                        <th className="px-3 py-1.5">Emisor</th>
+                        <th className="px-3 py-1.5">Cargo ocupó</th>
+                        <th className="px-3 py-1.5">Periodo</th>
+                        <th className="px-3 py-1.5 text-right">Días</th>
+                        <th className="px-3 py-1.5">Marcas</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/10">
+                      {prof.experiencias.map((e) => (
+                        <tr key={e.n} className="hover:bg-surface-container-high/30">
+                          <td className="px-3 py-2 font-mono text-secondary">{e.n}</td>
+                          <td className="px-3 py-2 text-on-surface max-w-[280px]">
+                            <p className="truncate" title={e.proyecto}>{e.proyecto}</p>
+                            {e.cui && <p className="font-mono text-[10px] text-secondary">CUI {e.cui}</p>}
+                          </td>
+                          <td className="px-3 py-2 text-secondary max-w-[160px] truncate" title={e.entidad_emisora}>
+                            {e.entidad_emisora}
+                          </td>
+                          <td className="px-3 py-2 text-secondary">{e.cargo_ocupado}</td>
+                          <td className="px-3 py-2 text-secondary whitespace-nowrap">
+                            {e.fecha_inicial} → {e.fecha_final}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-on-surface">{e.dias ?? "—"}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap gap-1">
+                              {(e.incluye_covid ?? "").startsWith("S") && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">COVID</span>
+                              )}
+                              {(e.traslape ?? "").startsWith("S") && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">TRASLAPE</span>
+                              )}
+                              {e.folio && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-container-high text-slate-500">f.{e.folio}</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 // ── alertas: decisión inline (sin window.prompt) ─────────────────────────────
 function FilaAlerta({ a, onDecidir }: {
   a: AlertaResumen; onDecidir: (a: AlertaResumen, relevante: boolean, razon?: string) => void;
@@ -249,6 +394,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
   const { id, jobId } = use(params);
   const [job, setJob] = useState<PivoteJob | null>(null);
   const [resumen, setResumen] = useState<ResumenAnalisis | null>(null);
+  const [profesionales, setProfesionales] = useState<ProfBreve[] | null>(null);
   const [salud, setSalud] = useState<SaludPortal[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
@@ -260,8 +406,12 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
     const j: PivoteJob = await r.json();
     setJob(j);
     if (j.estado === "completado" || j.estado === "requiere_revision") {
-      const rr = await fetch(`/api/pivote/jobs/${jobId}/resumen`);
+      const [rr, re] = await Promise.all([
+        fetch(`/api/pivote/jobs/${jobId}/resumen`),
+        fetch(`/api/pivote/jobs/${jobId}/espejo`),
+      ]);
       if (rr.ok) setResumen(await rr.json());
+      if (re.ok) setProfesionales((await re.json()).profesionales);
     }
   }, [jobId]);
 
@@ -413,6 +563,35 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
           ))}
         </div>
       </section>
+
+      {/* ── EXTRACCIÓN · profesionales y experiencias (patrón legacy) ── */}
+      {profesionales && profesionales.length > 0 && (
+        <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 mb-8 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
+            <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
+              <span className="material-symbols-outlined text-xl">groups</span>
+              Extracción — profesionales y experiencias
+            </h2>
+            <span className="text-[0.6875rem] text-outline">
+              {profesionales.length} profesionales · clic en una fila para el detalle
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-surface-container-high">
+                <tr>
+                  {["#", "Cargo", "Profesional", "Colegiatura", "Exps", "Años", "Veredicto", ""].map((h, i) => (
+                    <th key={i} className="px-3 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/10">
+                {profesionales.map((p) => <FilaProfesional key={p.n_prof} prof={p} />)}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* ── ENTREGABLES ── */}
       {(job.excel_final || job.zip_infoobras || pend > 0) && (

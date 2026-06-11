@@ -233,6 +233,78 @@ const resumenes = new Map<string, ResumenAnalisis>([
   }],
 ]);
 
+
+// ── Espejo (profesionales + experiencias) para la vista de extracción ────────
+
+export interface ExpBreve {
+  n: number; proyecto: string; entidad_emisora: string; cargo_ocupado: string;
+  fecha_inicial: string; fecha_final: string; dias: number | null;
+  cui?: string | null; incluye_covid?: string; traslape?: string | null;
+  folio?: string;
+}
+export interface ProfBreve {
+  n_prof: number; cargo: string; nombre: string; colegiatura?: string;
+  cumple?: string | null; total?: { dias?: number; anios?: number };
+  experiencias: ExpBreve[];
+}
+
+const espejos = new Map<string, ProfBreve[]>([
+  [jobA.job_id, [
+    { n_prof: 1, cargo: "JEFE DE SUPERVISIÓN", nombre: "Profesional 1", colegiatura: "CIP 90001",
+      cumple: "SÍ — 5.08 años", total: { dias: 1857, anios: 5.08 },
+      experiencias: [
+        { n: 1, proyecto: "Mejoramiento Hospital Regional Demo, Nivel II-1", entidad_emisora: "Gobierno Regional Demo",
+          cargo_ocupado: "RESIDENTE DE OBRA", fecha_inicial: "2016-06-10", fecha_final: "2017-05-15", dias: 340, cui: "2160001", folio: "599" },
+        { n: 2, proyecto: "Supervisión Plan de Contingencia C.S. Demo", entidad_emisora: "Consorcio IC Demo",
+          cargo_ocupado: "SUPERVISOR", fecha_inicial: "2019-05-01", fecha_final: "2019-10-31", dias: 184, folio: "601" },
+        { n: 3, proyecto: "Supervisión Mejoramiento P.S. Pentágono Demo", entidad_emisora: "Consorcio Pentágono Demo",
+          cargo_ocupado: "JEFE DE SUPERVISIÓN", fecha_inicial: "2021-05-13", fecha_final: "2023-05-06", dias: 724, cui: "2338873", folio: "604" },
+        { n: 4, proyecto: "Supervisión Hospital San Ramón Demo", entidad_emisora: "Consorcio San Ramón Demo",
+          cargo_ocupado: "JEFE DE SUPERVISIÓN", fecha_inicial: "2023-11-22", fecha_final: "2025-07-22", dias: 609, folio: "608" },
+      ] },
+    { n_prof: 2, cargo: "ING. CIVIL ESP. ESTRUCTURAS", nombre: "Profesional 2", colegiatura: "CIP 90002",
+      cumple: "SÍ — 3.96 años (backend: NO CUMPLE, 1.55 efectivos)", total: { dias: 1444, anios: 3.96 },
+      experiencias: [
+        { n: 1, proyecto: "Supervisión C.S. Pachas Demo", entidad_emisora: "Consorcio Salud Demo",
+          cargo_ocupado: "ESP. ESTRUCTURAS", fecha_inicial: "2019-11-04", fecha_final: "2023-03-31", dias: 1244, cui: "2338873", incluye_covid: "SÍ", folio: "612" },
+        { n: 2, proyecto: "Instalación Servicios de Salud Primer Nivel Demo", entidad_emisora: "Consorcio Unión Demo",
+          cargo_ocupado: "ESP. ESTRUCTURAS", fecha_inicial: "2014-12-10", fecha_final: "2015-06-27", dias: 200, folio: "615" },
+      ] },
+    { n_prof: 3, cargo: "ARQUITECTO ESP. INFRAESTRUCTURA", nombre: "Profesional 3", colegiatura: "CAP 17900",
+      cumple: "SÍ — 6.41 años", total: { dias: 2340, anios: 6.41 },
+      experiencias: [
+        { n: 1, proyecto: "Supervisión Hospital Hipólito Demo", entidad_emisora: "Consorcio Hospital Demo",
+          cargo_ocupado: "ARQUITECTO", fecha_inicial: "2016-08-01", fecha_final: "2019-02-28", dias: 942, folio: "616" },
+        { n: 2, proyecto: "Ejecución E.S. Piura Demo", entidad_emisora: "Consorcio Piura Demo",
+          cargo_ocupado: "ARQUITECTO", fecha_inicial: "2019-06-01", fecha_final: "2021-03-31", dias: 670, incluye_covid: "SÍ", folio: "619" },
+        { n: 3, proyecto: "Creación Hospital Especializado Demo", entidad_emisora: "Consorcio San Juan Demo",
+          cargo_ocupado: "ARQUITECTA SUPERVISORA", fecha_inicial: "2021-06-01", fecha_final: "2023-05-31", dias: 728, folio: "622" },
+      ] },
+    { n_prof: 4, cargo: "ING. ESP. INSTALACIONES SANITARIAS", nombre: "Profesional 4", colegiatura: "CIP 90004",
+      cumple: "SÍ — 3.78 años", total: { dias: 1379, anios: 3.78 },
+      experiencias: [
+        { n: 1, proyecto: "Supervisión C.S. Ambo Demo", entidad_emisora: "Consorcio Supervisor Demo",
+          cargo_ocupado: "ESP. SANITARIO", fecha_inicial: "2021-10-15", fecha_final: "2023-06-05", dias: 599, folio: "625" },
+        { n: 2, proyecto: "Supervisión C.S. Huácar Demo", entidad_emisora: "Consorcio Supervisor Demo",
+          cargo_ocupado: "ESP. SANITARIO", fecha_inicial: "2024-01-08", fecha_final: "2024-09-05", dias: 242, folio: "627" },
+        { n: 3, proyecto: "Ejecución C.S. Canta Demo", entidad_emisora: "Consorcio Ejecución Demo",
+          cargo_ocupado: "ESP. SANITARIO", fecha_inicial: "2024-09-11", fecha_final: "2025-02-02", dias: 145, traslape: "SÍ", folio: "630" },
+        { n: 4, proyecto: "Supervisión C.S. Ambo Demo (2º periodo)", entidad_emisora: "Consorcio Supervisor Demo",
+          cargo_ocupado: "ESP. SANITARIO", fecha_inicial: "2025-02-01", fecha_final: "2025-09-30", dias: 242, traslape: "SÍ", folio: "630" },
+      ] },
+  ]],
+  [jobB.job_id, [
+    { n_prof: 3, cargo: "ARQUITECTO ESP. INFRAESTRUCTURA", nombre: "Profesional 3", colegiatura: "CAP 18100",
+      cumple: null, total: { dias: 1101, anios: 3.02 },
+      experiencias: [
+        { n: 1, proyecto: "Supervisión Hospital Andino Demo", entidad_emisora: "Consorcio Andino Demo",
+          cargo_ocupado: "ARQUITECTO", fecha_inicial: "2018-02-01", fecha_final: "2019-12-31", dias: 699, folio: "402" },
+        { n: 2, proyecto: "Mejoramiento C.S. San Martín de Porres, distrito Demo", entidad_emisora: "Consorcio SMP Demo",
+          cargo_ocupado: "ARQUITECTO", fecha_inicial: "2021-03-01", fecha_final: "2022-08-15", dias: 533, folio: "410" },
+      ] },
+  ]],
+]);
+
 // ── Salud de portales ────────────────────────────────────────────────────────
 
 const salud: SaludPortal[] = [
@@ -338,6 +410,10 @@ export const db = {
 
   resumen(jobId: string): ResumenAnalisis | null {
     return resumenes.get(jobId) ?? null;
+  },
+
+  espejoProfesionales(jobId: string): ProfBreve[] | null {
+    return espejos.get(jobId) ?? null;
   },
 
   salud(): SaludPortal[] {
