@@ -1,0 +1,12 @@
+node_modules/
+.next/
+# CRÍTICO: .env.local apunta a 127.0.0.1 (dev). En Docker, PIVOTE_API la pone
+# docker-compose apuntando al servicio `backend`. NO meter .env.local a la imagen.
+.env.local
+.env*.local
+npm-debug.log*
+.git/
+.vscode/
+.idea/
+Dockerfile
+.dockerignore

@@ -59,49 +59,47 @@
 
   /* ── DARK theme ────────────────────────────────────────────────────────── */
   .dark {
-    /* Brand (invertido — en M3 dark, primary se vuelve "claro") */
-    --color-primary: 173 200 245;
-    --color-primary-container: 30 58 95;
-    --color-on-primary: 0 48 100;
-    --color-on-primary-container: 213 227 255;
-    --color-primary-fixed: 213 227 255;
-    --color-primary-fixed-dim: 173 200 245;
+    /* Palette oscuro "InfoObras – Plataforma Técnica" (muestreo real de píxeles).
+     * accent brillante #9FC9FB para acción/enlaces/activos; base #87A8CD botones. */
+    --color-primary: 159 201 251;            /* #9FC9FB bright — acción/enlaces/activo */
+    --color-primary-container: 80 103 131;   /* #506783 nav activo */
+    --color-on-primary: 17 18 23;            /* #111217 texto sobre accent brillante */
+    --color-on-primary-container: 202 205 210;
+    --color-primary-fixed: 159 201 251;
+    --color-primary-fixed-dim: 135 168 205;  /* #87A8CD base — botones */
 
-    /* Secondary refinado: mas saturado, mejor contraste contra surfaces oscuras.
-     * Antes (185 200 222) se confundia con grises medios. */
-    --color-secondary: 197 211 232;
-    --color-secondary-container: 64 80 100;
-    --color-on-secondary: 36 50 68;
-    --color-on-secondary-container: 220 232 252;
+    /* Secondary = azul apagado base; container = superficie elevada */
+    --color-secondary: 135 168 205;          /* #87A8CD */
+    --color-secondary-container: 29 32 39;   /* #1D2027 elevated */
+    --color-on-secondary: 17 18 23;
+    --color-on-secondary-container: 202 205 210;
 
-    /* Tertiary distinto del primary para tener un acento alternativo.
-     * Antes era IGUAL al primary (173 200 245) — ahora un azul-violeta suave
-     * para diferenciar enlaces secundarios, badges informativos, etc. */
-    --color-tertiary: 200 192 232;
-    --color-tertiary-container: 56 56 110;
+    /* Tertiary = gris-azul tenue para acentos/enlaces secundarios */
+    --color-tertiary: 109 123 137;           /* #6D7B89 muted */
+    --color-tertiary-container: 45 50 59;    /* #2D323B card */
 
     --color-error: 255 180 171;
     --color-error-container: 147 0 10;
 
-    /* Surfaces (dark) — escalonadas como M3 specifica */
-    --color-surface: 17 21 28;
-    --color-surface-dim: 17 21 28;
-    --color-surface-bright: 54 57 63;
-    --color-surface-container-lowest: 12 16 21;
-    --color-surface-container-low: 25 28 29;
-    --color-surface-container: 32 35 40;
-    --color-surface-container-high: 44 47 52;
-    --color-surface-container-highest: 56 60 65;
+    /* Surfaces (dark) — canvas #111217 → surface #171B20 → elevated #1D2027 → card #2D323B */
+    --color-surface: 17 18 23;               /* #111217 canvas (fondo principal) */
+    --color-surface-dim: 17 18 23;
+    --color-surface-bright: 45 50 59;        /* #2D323B card */
+    --color-surface-container-lowest: 13 14 18;
+    --color-surface-container-low: 23 27 32; /* #171B20 surface */
+    --color-surface-container: 29 32 39;     /* #1D2027 elevated (sidebar, inputs) */
+    --color-surface-container-high: 45 50 59;/* #2D323B card (tarjeta detección, hover) */
+    --color-surface-container-highest: 54 60 70;
 
-    /* Texto: mas contraste para lecturas largas */
-    --color-on-surface: 230 232 234;
-    --color-on-surface-variant: 207 210 218;
-    --color-outline: 162 167 175;
-    --color-outline-variant: 76 81 89;
+    /* Texto: #CACDD2 principal · #9CA0A4 secundario · #6D7B89 tenue */
+    --color-on-surface: 202 205 210;         /* #CACDD2 */
+    --color-on-surface-variant: 156 160 164; /* #9CA0A4 */
+    --color-outline: 109 123 137;            /* #6D7B89 muted (placeholders/footer) */
+    --color-outline-variant: 45 50 59;       /* #2D323B bordes de tarjetas/divisores */
 
     --color-inverse-surface: 225 227 228;
     --color-inverse-on-surface: 46 49 50;
-    --color-inverse-primary: 44 65 98;
+    --color-inverse-primary: 80 103 131;
 
     --shadow-ambient: 0 0 0;
     --shadow-ambient-alpha: 0.5;

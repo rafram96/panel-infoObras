@@ -3,30 +3,34 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// Flujo del pivote = Concursos (de ahí cuelga expediente → análisis → revisión →
+// descargas). El resto (Dashboard, Nuevo Análisis y Historial legacy de
+// motor-OCR) queda OCULTO pero preservado: restaurar quitando el comentario.
 const NAV_MAIN = [
   { href: "/concursos", icon: "gavel", label: "Concursos" },
-  { href: "/", icon: "dashboard", label: "Dashboard" },
-  { href: "/nuevo-analisis", icon: "query_stats", label: "Nuevo Análisis" },
-  { href: "/historial", icon: "manage_search", label: "Historial" },
+  // { href: "/", icon: "dashboard", label: "Dashboard" },
+  // { href: "/nuevo-analisis", icon: "query_stats", label: "Nuevo Análisis" },
+  // { href: "/historial", icon: "manage_search", label: "Historial" },
 ] as const;
 
+// OCULTAS (herramientas de debug, no van en el flujo de Manuel). Preservadas.
 const NAV_TOOLS = [
-  { href: "/herramientas/extraccion", icon: "person_search", label: "Profesionales" },
-  { href: "/herramientas/profesionales", icon: "compare_arrows", label: "Cruces (Pros)" },
-  { href: "/herramientas/tdr", icon: "fact_check", label: "Requisitos TDR" },
-  { href: "/herramientas/infoobras", icon: "domain", label: "InfoObras" },
-  { href: "/herramientas/debug-pdfplumber", icon: "bug_report", label: "Debug pdfplumber" },
+  // { href: "/herramientas/extraccion", icon: "person_search", label: "Profesionales" },
+  // { href: "/herramientas/profesionales", icon: "compare_arrows", label: "Cruces (Pros)" },
+  // { href: "/herramientas/tdr", icon: "fact_check", label: "Requisitos TDR" },
+  // { href: "/herramientas/infoobras", icon: "domain", label: "InfoObras" },
+  // { href: "/herramientas/debug-pdfplumber", icon: "bug_report", label: "Debug pdfplumber" },
 ] as const;
 
+// OCULTA (alertas globales legacy). Las alertas del pivote viven DENTRO del
+// expediente de cada análisis. Preservada.
 const NAV_INFO = [
-  { href: "/info/alertas", icon: "warning", label: "Alertas" },
+  // { href: "/info/alertas", icon: "warning", label: "Alertas" },
 ] as const;
 
-// Flat list for mobile bottom nav (max 5 items)
+// Bottom nav móvil — solo el flujo del pivote.
 const NAV_MOBILE = [
   ...NAV_MAIN,
-  { href: "/herramientas/extraccion", icon: "person_search", label: "Profesionales" },
-  { href: "/herramientas/tdr", icon: "fact_check", label: "TDR" },
 ] as const;
 
 export default function Sidebar() {
@@ -78,12 +82,14 @@ export default function Sidebar() {
               </Link>
             ))}
 
-            {/* Herramientas section */}
+            {/* Herramientas section — solo si hay items (hoy oculta) */}
+            {NAV_TOOLS.length > 0 && (
             <div className="pt-4 pb-1">
               <span className="px-3 text-[0.6rem] font-bold uppercase tracking-[0.15rem] text-slate-400">
                 Herramientas
               </span>
             </div>
+            )}
             {NAV_TOOLS.map(({ href, icon, label }) => (
               <Link
                 key={href}
@@ -108,12 +114,14 @@ export default function Sidebar() {
               </Link>
             ))}
 
-            {/* Información section */}
+            {/* Información section — solo si hay items (hoy oculta) */}
+            {NAV_INFO.length > 0 && (
             <div className="pt-4 pb-1">
               <span className="px-3 text-[0.6rem] font-bold uppercase tracking-[0.15rem] text-slate-400">
                 Información
               </span>
             </div>
+            )}
             {NAV_INFO.map(({ href, icon, label }) => (
               <Link
                 key={href}

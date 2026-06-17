@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import PanelShell from "@/components/PanelShell";
 import type { Job } from "@/lib/types";
 import { STATUS_LABEL, STATUS_BADGE, formatFechaHumano } from "@/lib/helpers";
 
-// ── Dashboard ────────────────────────────────────────────────────────────────
-export default function Dashboard() {
+// El home del panel ABRE directo en el flujo del pivote (Concursos). El Dashboard
+// legacy (motor-OCR) queda PRESERVADO abajo (DashboardLegacy), solo oculto.
+export default function Home() {
+  redirect("/concursos");
+}
+
+// ── Dashboard legacy (motor-OCR) — OCULTO, ya no es el home ────────────────────
+export function DashboardLegacy() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 

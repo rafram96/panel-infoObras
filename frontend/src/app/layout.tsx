@@ -14,14 +14,10 @@ const ANTI_FLASH = `
 (function() {
   try {
     var stored = localStorage.getItem('panel-theme');
-    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var dark = stored === 'dark' || (!stored && prefersDark);
-    if (dark) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.style.colorScheme = 'dark';
-    } else {
-      document.documentElement.style.colorScheme = 'light';
-    }
+    var dark = stored !== 'light';   // oscuro por defecto (diseño unificado)
+    var root = document.documentElement;
+    root.classList.toggle('dark', dark);
+    root.style.colorScheme = dark ? 'dark' : 'light';
   } catch (e) {}
 })();
 `;
@@ -32,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" className="dark">
       <head>
         <script dangerouslySetInnerHTML={{ __html: ANTI_FLASH }} />
         <link

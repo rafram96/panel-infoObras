@@ -702,7 +702,6 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
                       <p className="mt-2 text-xs text-outline leading-relaxed">
                         <span className="material-symbols-outlined text-[14px] align-text-bottom mr-1">subdirectory_arrow_right</span>
                         {v.motivo_backend}
-                        {v.fuente && <span className="font-medium"> · {v.fuente}</span>}
                       </p>
                     )}
                   </div>

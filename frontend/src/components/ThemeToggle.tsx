@@ -7,12 +7,10 @@ type Theme = "light" | "dark";
 const STORAGE_KEY = "panel-theme";
 
 function leerThemeInicial(): Theme {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
   const guardado = window.localStorage.getItem(STORAGE_KEY);
-  if (guardado === "dark" || guardado === "light") return guardado;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  if (guardado === "light") return "light";
+  return "dark"; // oscuro por defecto (diseño unificado)
 }
 
 function aplicarTheme(theme: Theme) {

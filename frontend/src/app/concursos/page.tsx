@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
-import { fmtFecha, type Concurso } from "@/lib/pivote/types";
+import { type Concurso } from "@/lib/pivote/types";
 
 type ConcursoResumen = Concurso & { n_jobs: number; pendientes: number };
 
@@ -146,7 +146,7 @@ export default function ConcursosPage() {
             <table className="w-full text-left">
               <thead className="bg-surface-container-high">
                 <tr>
-                  {["Concurso", "Entidad", "Presentación", "Postores", "A revisión", ""].map((h, i) => (
+                  {["Concurso", "Entidad", "Postores", "A revisión", ""].map((h, i) => (
                     <th key={i} className="px-5 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
                   ))}
                 </tr>
@@ -160,7 +160,6 @@ export default function ConcursosPage() {
                       </Link>
                     </td>
                     <td className="px-5 py-3.5 text-xs text-outline">{c.entidad ?? "—"}</td>
-                    <td className="px-5 py-3.5 text-xs text-outline whitespace-nowrap">{fmtFecha(c.fecha_presentacion)}</td>
                     <td className="px-5 py-3.5">
                       <span className="px-2.5 py-0.5 rounded bg-surface-container-high text-[0.6875rem] font-bold text-on-surface-variant">
                         {c.n_jobs}
