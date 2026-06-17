@@ -189,8 +189,9 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap">
                         <Link href={`/concursos/${id}/jobs/${j.job_id}`}
-                          className="inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
-                          <span className="material-symbols-outlined text-base">visibility</span> Ver
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/25 transition-colors">
+                          Abrir análisis
+                          <span className="material-symbols-outlined text-[15px]">chevron_right</span>
                         </Link>
                         {j.excel_final && (
                           <a href={j.excel_final} download

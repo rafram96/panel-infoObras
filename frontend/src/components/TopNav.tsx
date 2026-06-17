@@ -22,16 +22,6 @@ export default function TopNav({ title, subtitle }: TopNavProps) {
       </div>
       <div className="flex items-center gap-2">
         <ThemeToggle />
-        <button className="p-1.5 rounded text-secondary hover:bg-surface-container transition-all duration-200">
-          <span className="material-symbols-outlined text-[20px]">
-            notifications
-          </span>
-        </button>
-        <button className="p-1.5 rounded text-secondary hover:bg-surface-container transition-all duration-200">
-          <span className="material-symbols-outlined text-[20px]">
-            settings
-          </span>
-        </button>
         <div className="h-8 w-8 ml-2 rounded-full overflow-hidden border border-outline-variant/20 bg-secondary-container flex items-center justify-center">
           <span className="material-symbols-outlined text-primary text-[20px]">
             account_circle
