@@ -426,6 +426,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
   const [salud, setSalud] = useState<SaludPortal[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
+  const [tab, setTab] = useState<"pasos" | "profesionales" | "veredictos" | "factores" | "alertas" | "descargas">("profesionales");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const cargar = useCallback(async () => {
@@ -558,7 +559,30 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
         </div>
       )}
 
+      {/* ── PESTAÑAS (subvistas) ── */}
+      <nav className="flex flex-wrap gap-1 mb-6 border-b border-outline-variant/10">
+        {([
+          ["pasos", "Pasos", "conveyor_belt", null],
+          ["profesionales", "Profesionales", "groups", profesionales?.length ?? null],
+          ["veredictos", "Veredictos", "gavel", resumen?.veredictos.length ?? null],
+          ["factores", "Factores", "grading", null],
+          ["alertas", "Alertas", "notification_important", nAlertas || null],
+          ["descargas", "Descargas", "download", null],
+        ] as const).map(([id, label, icon, badge]) => (
+          <button key={id} onClick={() => setTab(id)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              tab === id ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-primary"}`}>
+            <span className="material-symbols-outlined text-[18px]">{icon}</span>
+            {label}
+            {badge != null && (
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-surface-container-high text-[0.625rem] font-bold text-outline">{badge}</span>
+            )}
+          </button>
+        ))}
+      </nav>
+
       {/* ── PIPELINE con detalle por etapa ── */}
+      {tab === "pasos" && (
       <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 mb-8 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
           <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
@@ -591,9 +615,10 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
           ))}
         </div>
       </section>
+      )}
 
       {/* ── EXTRACCIÓN · profesionales y experiencias (patrón legacy) ── */}
-      {profesionales && profesionales.length > 0 && (
+      {tab === "profesionales" && profesionales && profesionales.length > 0 && (
         <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 mb-8 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
             <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
@@ -622,7 +647,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
       )}
 
       {/* ── ENTREGABLES ── */}
-      {(job.excel_final || job.zip_infoobras || pend > 0) && (
+      {tab === "descargas" && (job.excel_final || job.zip_infoobras || pend > 0) && (
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className="bg-surface-container-lowest p-5 rounded-xl shadow-ambient border border-outline-variant/10 flex flex-col gap-3">
             <div className="flex items-center gap-2 text-primary">
@@ -690,6 +715,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
       {resumen && (
         <>
           {/* veredictos */}
+          {tab === "veredictos" && (
           <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 mb-8 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
               <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
@@ -737,8 +763,10 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
               })}
             </div>
           </section>
+          )}
 
           {/* alertas */}
+          {tab === "alertas" && (
           <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 mb-8 overflow-hidden">
             <div className="px-5 py-4 border-b border-outline-variant/10">
               <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
@@ -752,8 +780,10 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
                 .map((a) => <FilaAlerta key={a.id} a={a} onDecidir={decidirAlerta} />)}
             </div>
           </section>
+          )}
 
           {/* factores */}
+          {tab === "factores" && (
           <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
             <div className="px-5 py-4 border-b border-outline-variant/10">
               <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
@@ -786,6 +816,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
               </tbody>
             </table>
           </section>
+          )}
         </>
       )}
     </PanelShell>
