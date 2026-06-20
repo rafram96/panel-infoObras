@@ -175,7 +175,8 @@ interface ExpBreve {
   cui?: string | null; incluye_covid?: string; traslape?: string | null; folio?: string;
 }
 interface ProfBreve {
-  n_prof: number; cargo: string; nombre: string; colegiatura?: string;
+  n_prof: number; cargo: string; nombre: string; dni?: string; colegiatura?: string;
+  notas?: string[];
   cumple?: string | null; total?: { dias?: number; anios?: number };
   experiencias: ExpBreve[];
 }
@@ -195,7 +196,20 @@ function FilaProfesional({ prof }: { prof: ProfBreve }) {
         <td className="px-3 py-2">
           <span className="text-sm font-medium text-primary">{prof.cargo}</span>
         </td>
-        <td className="px-3 py-2 text-sm text-on-surface">{prof.nombre}</td>
+        <td className="px-3 py-2 text-sm text-on-surface">
+          <div className="flex items-center gap-1.5">
+            <span>{prof.nombre}</span>
+            {prof.notas && prof.notas.length > 0 && (
+              <span
+                className="material-symbols-outlined text-[15px] text-amber-500 cursor-help"
+                title={prof.notas.join("\n")}
+              >
+                warning
+              </span>
+            )}
+          </div>
+          {prof.dni && <span className="text-[11px] text-outline font-mono">DNI {prof.dni}</span>}
+        </td>
         <td className="px-3 py-2 text-xs text-secondary">{prof.colegiatura ?? "—"}</td>
         <td className="px-3 py-2 text-xs text-secondary tabular-nums">{prof.experiencias.length}</td>
         <td className="px-3 py-2 text-xs text-secondary tabular-nums">
@@ -237,6 +251,7 @@ function FilaProfesional({ prof }: { prof: ProfBreve }) {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   {[
                     { label: "Nombre", value: prof.nombre },
+                    { label: "DNI", value: prof.dni },
                     { label: "Colegiatura", value: prof.colegiatura },
                     { label: "Total días (brutos)", value: prof.total?.dias != null ? String(prof.total.dias) : undefined },
                     { label: "Veredicto", value: prof.cumple ?? "pendiente de revisión" },
@@ -249,6 +264,19 @@ function FilaProfesional({ prof }: { prof: ProfBreve }) {
                     </div>
                   ))}
                 </div>
+                {prof.notas && prof.notas.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">warning</span>
+                      Notas de extracción (Claude)
+                    </p>
+                    <ul className="list-disc pl-5 space-y-0.5 text-xs text-on-surface-variant">
+                      {prof.notas.map((n, i) => (
+                        <li key={i}>{n}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               {/* Experiencias */}
