@@ -38,6 +38,27 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
     setData(await r.json());
   }, [id]);
 
+  // puntaje técnico por postor (para comparar de un vistazo) — se re-pide solo
+  // cuando cambia el conjunto de análisis, no en cada auto-refresh.
+  const [puntajes, setPuntajes] = useState<Record<string, number | null>>({});
+  const jobIdsKey = (data?.jobs ?? []).map((j) => j.job_id).join(",");
+  useEffect(() => {
+    if (!jobIdsKey) return;
+    let cancel = false;
+    (async () => {
+      const pares = await Promise.all(jobIdsKey.split(",").map(async (jid) => {
+        try {
+          const r = await fetch(`/api/pivote/jobs/${jid}/resumen`);
+          if (!r.ok) return [jid, null] as const;
+          const d = await r.json();
+          return [jid, (d.puntaje_total ?? null) as number | null] as const;
+        } catch { return [jid, null] as const; }
+      }));
+      if (!cancel) setPuntajes(Object.fromEntries(pares));
+    })();
+    return () => { cancel = true; };
+  }, [jobIdsKey]);
+
   // auto-refresh: el MCP crea análisis sin pasar por el panel
   useEffect(() => {
     cargar();
@@ -124,7 +145,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
             <table className="w-full text-left">
               <thead className="bg-surface-container-high">
                 <tr>
-                  {["Postor", "Origen", "Estado", "Pipeline", "Alertas", "A revisión", "Acciones"].map((h) => (
+                  {["Postor", "Origen", "Estado", "Puntaje", "Pipeline", "Alertas", "A revisión", "Acciones"].map((h) => (
                     <th key={h} className="px-5 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
                   ))}
                 </tr>
@@ -154,6 +175,13 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                       </td>
                       <td className="px-5 py-3">
                         <span className={`inline-block px-2.5 py-0.5 rounded text-[0.6875rem] font-semibold ${ui.cls}`}>{ui.label}</span>
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        {puntajes[j.job_id] != null ? (
+                          <span className="text-base font-bold text-primary tabular-nums">{puntajes[j.job_id]}</span>
+                        ) : (
+                          <span className="text-xs text-outline">—</span>
+                        )}
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
