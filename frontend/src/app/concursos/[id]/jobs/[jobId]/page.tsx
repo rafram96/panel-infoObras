@@ -38,6 +38,11 @@ function fmtMs(ms?: number | null): string {
   return s < 60 ? `${s.toFixed(1)} s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
 }
 
+// Normaliza el guion largo "—" → "-" en textos de datos (Claude/backend lo usan
+// como separador; el evaluador lo prefiere sin ese símbolo). NO afecta los "—"
+// de valores vacíos (esos son literales, no pasan por aquí).
+const nm = (s?: string | null) => (s == null ? s : s.replace(/—/g, "-"));
+
 // ── tarjeta métrica (mismo patrón del dashboard) ─────────────────────────────
 function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
   icon: string; label: string; value: string; accent?: "rojo" | "ambar"; borde?: string;
@@ -356,7 +361,7 @@ function FilaAlerta({ a, onDecidir }: {
           {a.codigo}
         </span>
         <div className="flex-1 min-w-[240px]">
-          <p className="text-sm text-primary leading-snug">{a.mensaje}</p>
+          <p className="text-sm text-primary leading-snug">{nm(a.mensaje)}</p>
           <p className="text-[0.6875rem] text-outline mt-1">
             {a.referencia}{a.fuente ? <> · <span className="font-medium">{a.fuente}</span></> : null}
           </p>
@@ -623,7 +628,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
           <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
             <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
               <span className="material-symbols-outlined text-xl">groups</span>
-              Extracción — profesionales y experiencias
+              Extracción: profesionales y experiencias
             </h2>
             <span className="text-[0.6875rem] text-outline">
               {profesionales.length} profesionales · clic en una fila para el detalle
@@ -720,7 +725,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
               <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
                 <span className="material-symbols-outlined text-xl">gavel</span>
-                Veredictos — lo que evaluó Claude y lo que verificó el sistema
+                Veredictos: lo que evaluó Claude y lo que verificó el sistema
               </h2>
               {resumen.puntaje_total != null && (
                 <span className="text-xs text-outline">
@@ -755,7 +760,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
                     {v.motivo_backend && (
                       <p className="mt-2 text-xs text-outline leading-relaxed">
                         <span className="material-symbols-outlined text-[14px] align-text-bottom mr-1">subdirectory_arrow_right</span>
-                        {v.motivo_backend}
+                        {nm(v.motivo_backend)}
                       </p>
                     )}
                   </div>
@@ -771,7 +776,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
             <div className="px-5 py-4 border-b border-outline-variant/10">
               <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
                 <span className="material-symbols-outlined text-xl">notification_important</span>
-                Alertas — la máquina detecta, tú decides
+                Alertas: la máquina detecta, tú decides
               </h2>
             </div>
             <div className="divide-y divide-outline-variant/10">
@@ -802,8 +807,8 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
               <tbody className="divide-y divide-outline-variant/10">
                 {resumen.factores.map((f, i) => (
                   <tr key={i} className="hover:bg-surface-container-high/40 transition-colors">
-                    <td className="px-5 py-3 text-sm text-primary font-medium">{f.factor}</td>
-                    <td className="px-5 py-3 text-xs text-outline">{f.detalle}</td>
+                    <td className="px-5 py-3 text-sm text-primary font-medium">{nm(f.factor)}</td>
+                    <td className="px-5 py-3 text-xs text-outline">{nm(f.detalle)}</td>
                     <td className="px-5 py-3 text-right">
                       {typeof f.puntaje === "number" ? (
                         <span className="text-sm font-bold text-primary">{f.puntaje}</span>
