@@ -43,6 +43,16 @@ function fmtMs(ms?: number | null): string {
 // de valores vacíos (esos son literales, no pasan por aquí).
 const nm = (s?: string | null) => (s == null ? s : s.replace(/—/g, "-"));
 
+// Etiquetas legibles para agrupar las alertas por su código.
+const ALERTA_LABEL: Record<string, string> = {
+  PARALIZACION: "Paralizaciones / gaps",
+  VEREDICTO: "Sin veredicto",
+  COBERTURA: "Cobertura baja",
+  INFOOBRAS: "Portal sin responder",
+  PASO5: "Días efectivos",
+  NOTA9: "Traslapes",
+};
+
 // ── tarjeta métrica (mismo patrón del dashboard) ─────────────────────────────
 function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
   icon: string; label: string; value: string; accent?: "rojo" | "ambar"; borde?: string;
@@ -432,6 +442,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
   const [error, setError] = useState<string | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<"pasos" | "profesionales" | "veredictos" | "factores" | "alertas" | "descargas">("profesionales");
+  const [filtroCod, setFiltroCod] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const cargar = useCallback(async () => {
@@ -488,6 +499,18 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
     `${v.cumple_backend ?? v.cumple_claude ?? ""}`.toUpperCase();
   const noCumplen = ver.filter((v) => veredictoTxt(v).includes("NO CUMPLE")).length;
   const cumplen = ver.filter((v) => veredictoTxt(v).includes("CUMPLE") && !veredictoTxt(v).includes("NO CUMPLE")).length;
+  const gruposAlerta = (() => {
+    const m = new Map<string, { cod: string; n: number; sev: string }>();
+    for (const a of resumen?.alertas ?? []) {
+      const cod = a.codigo || "OTRAS";
+      const g = m.get(cod) ?? { cod, n: 0, sev: a.severidad };
+      g.n++;
+      if (a.severidad === "alerta" || a.severidad === "critica") g.sev = a.severidad;
+      m.set(cod, g);
+    }
+    const ord: Record<string, number> = { critica: 0, alerta: 1, advertencia: 2 };
+    return [...m.values()].sort((x, y) => (ord[x.sev] ?? 3) - (ord[y.sev] ?? 3) || y.n - x.n);
+  })();
 
   const toggle = (nombre: string) =>
     setAbiertas((prev) => {
@@ -815,8 +838,34 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
                 Alertas: la máquina detecta, tú decides
               </h2>
             </div>
+            {gruposAlerta.length > 0 && (
+              <div className="px-5 py-3 flex flex-wrap items-center gap-2 border-b border-outline-variant/10">
+                {gruposAlerta.map((g) => {
+                  const activo = filtroCod === g.cod;
+                  const alta = g.sev === "alerta" || g.sev === "critica";
+                  return (
+                    <button key={g.cod} onClick={() => setFiltroCod(activo ? null : g.cod)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                        activo
+                          ? "border-primary bg-primary/15 text-primary"
+                          : alta
+                            ? "border-red-500/30 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:border-red-500/60"
+                            : "border-amber-500/30 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 hover:border-amber-500/60"
+                      }`}>
+                      <span className="font-bold tabular-nums">{g.n}</span>
+                      {ALERTA_LABEL[g.cod] ?? g.cod}
+                    </button>
+                  );
+                })}
+                {filtroCod && (
+                  <button onClick={() => setFiltroCod(null)}
+                    className="ml-1 text-xs text-outline hover:text-primary underline">ver todas</button>
+                )}
+              </div>
+            )}
             <div className="divide-y divide-outline-variant/10">
               {[...resumen.alertas]
+                .filter((a) => !filtroCod || (a.codigo || "OTRAS") === filtroCod)
                 .sort((a, b) => SEVERIDAD_UI[a.severidad].orden - SEVERIDAD_UI[b.severidad].orden)
                 .map((a) => <FilaAlerta key={a.id} a={a} onDecidir={decidirAlerta} />)}
             </div>
