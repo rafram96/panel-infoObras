@@ -483,6 +483,11 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
   const criticas = resumen?.alertas.filter((x) => x.severidad === "critica").length ?? 0;
   const nAlertas = resumen?.alertas.length ?? 0;
   const portalesCaidos = salud.filter((s) => !s.ok);
+  const ver = resumen?.veredictos ?? [];
+  const veredictoTxt = (v: { cumple_backend?: string | null; cumple_claude?: string | null }) =>
+    `${v.cumple_backend ?? v.cumple_claude ?? ""}`.toUpperCase();
+  const noCumplen = ver.filter((v) => veredictoTxt(v).includes("NO CUMPLE")).length;
+  const cumplen = ver.filter((v) => veredictoTxt(v).includes("CUMPLE") && !veredictoTxt(v).includes("NO CUMPLE")).length;
 
   const toggle = (nombre: string) =>
     setAbiertas((prev) => {
@@ -513,10 +518,22 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
         <span className="text-xs font-mono text-outline">{job.analisis_id}</span>
       </div>
 
-      {/* métricas */}
+      {/* métricas — lo más relevante según el estado del análisis */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricCard icon="conveyor_belt" label="Pasos" value={`${completas}/${ETAPAS_ORDEN.length}`} />
-        <MetricCard icon="speed" label="Progreso" value={`${pct}%`} />
+        {resumen ? (
+          <>
+            <MetricCard icon="verified" label="Profesionales que cumplen"
+              value={`${cumplen}/${ver.length}`}
+              borde={noCumplen > 0 ? "border-red-500" : cumplen > 0 ? "border-green-500" : "border-primary"} />
+            <MetricCard icon="grading" label="Puntaje técnico"
+              value={resumen.puntaje_total != null ? String(resumen.puntaje_total) : "—"} />
+          </>
+        ) : (
+          <>
+            <MetricCard icon="conveyor_belt" label="Pasos" value={`${completas}/${ETAPAS_ORDEN.length}`} />
+            <MetricCard icon="speed" label="Progreso" value={`${pct}%`} />
+          </>
+        )}
         <MetricCard
           icon="notification_important" label="Alertas"
           value={resumen ? String(nAlertas) : "—"}
@@ -524,12 +541,31 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
           borde={criticas > 0 ? "border-red-500" : "border-primary"}
         />
         <MetricCard
-          icon="pending_actions" label="A revisión"
+          icon="pending_actions" label="Por confirmar"
           value={String(pend)}
           accent={pend > 0 ? "ambar" : undefined}
           borde={pend > 0 ? "border-amber-500" : "border-primary"}
         />
       </section>
+
+      {/* CTA · casos por confirmar — acceso directo (sin cazar pestañas) */}
+      {pend > 0 && (
+        <Link href={`/concursos/${id}/jobs/${jobId}/revision`}
+          className="group mb-6 flex items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 px-5 py-4 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors">
+          <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-2xl">pending_actions</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+              {pend} {pend === 1 ? "caso espera tu decisión" : "casos esperan tu decisión"}
+            </p>
+            <p className="text-xs text-amber-700/80 dark:text-amber-300/70">
+              Al confirmar, el sistema re-verifica solo esa experiencia y regenera el Excel/ZIP.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-amber-700 dark:text-amber-300 group-hover:gap-2 transition-all whitespace-nowrap">
+            Resolver <span className="material-symbols-outlined text-base">arrow_forward</span>
+          </span>
+        </Link>
+      )}
 
       {/* banner de salud de portales */}
       {portalesCaidos.length > 0 && (
