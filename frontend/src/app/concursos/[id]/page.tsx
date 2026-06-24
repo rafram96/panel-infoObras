@@ -7,7 +7,7 @@ import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
 import {
   type ConcursoConJobs, type PivoteJob,
-  ETAPAS_ORDEN, JOB_ESTADO_UI, pendientesHumano, fmtFecha,
+  ETAPAS_ORDEN, JOB_ESTADO_UI, pendientesHumano, fmtFechaHora,
 } from "@/lib/pivote/types";
 
 function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
@@ -162,7 +162,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                         <p className="text-sm text-primary font-medium truncate max-w-[260px]">{j.postor ?? j.analisis_id}</p>
                         <p className="text-[0.6875rem] font-mono text-outline">{j.analisis_id}</p>
                       </td>
-                      <td className="px-5 py-3 text-xs text-outline whitespace-nowrap">{fmtFecha(j.creado_en)}</td>
+                      <td className="px-5 py-3 text-xs text-outline whitespace-nowrap">{fmtFechaHora(j.creado_en)}</td>
                       <td className="px-5 py-3">
                         {j.origen === "mcp" ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary text-[0.6875rem] font-semibold">

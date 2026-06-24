@@ -202,6 +202,19 @@ export function fmtFecha(v?: string | null): string {
   return m ? `${m[3]}/${m[2]}/${m[1].slice(2)}` : v;
 }
 
+/** Timestamp ISO (UTC) → DD/MM/YY HH:MM en hora de Lima, Perú (UTC-5). Para los
+ *  `creado_en` de concursos/análisis. Si no es un timestamp válido, cae a fmtFecha. */
+export function fmtFechaHora(v?: string | null): string {
+  if (!v) return "—";
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return fmtFecha(v);
+  return new Intl.DateTimeFormat("es-PE", {
+    day: "2-digit", month: "2-digit", year: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+    timeZone: "America/Lima",
+  }).format(d).replace(",", "");
+}
+
 /** Reemplaza TODAS las fechas ISO dentro de un texto por DD/MM/YY
  *  (para campos compuestos tipo "2021-03-01 → 2022-08-15"). */
 export function fmtFechasEnTexto(s?: string | null): string {
