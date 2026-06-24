@@ -31,6 +31,8 @@ export default function ConcursosPage() {
   const [filtro, setFiltro] = useState("");
   const [creando, setCreando] = useState(false);
   const [nomenclatura, setNomenclatura] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editVal, setEditVal] = useState("");
 
   const cargar = useCallback(async () => {
     try {
@@ -40,6 +42,18 @@ export default function ConcursosPage() {
       setCargando(false);
     }
   }, []);
+
+  const renombrar = async (id: string) => {
+    const nom = editVal.trim();
+    if (!nom) { setEditId(null); return; }
+    const r = await fetch(`/api/pivote/concursos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nomenclatura: nom }),
+    });
+    setEditId(null);
+    if (r.ok) cargar();
+  };
 
   useEffect(() => {
     cargar();
@@ -145,9 +159,36 @@ export default function ConcursosPage() {
                 {visibles.map((c) => (
                   <tr key={c.concurso_id} className="hover:bg-surface-container-high/40 transition-colors">
                     <td className="px-5 py-3.5">
-                      <Link href={`/concursos/${c.concurso_id}`} className="text-sm font-semibold text-primary hover:underline">
-                        {c.nomenclatura}
-                      </Link>
+                      {editId === c.concurso_id ? (
+                        <span className="inline-flex items-center gap-1">
+                          <input
+                            autoFocus
+                            value={editVal}
+                            onChange={(e) => setEditVal(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") renombrar(c.concurso_id); if (e.key === "Escape") setEditId(null); }}
+                            className="w-full max-w-[300px] h-8 px-2 rounded border border-primary/40 text-sm focus:outline-none"
+                          />
+                          <button onClick={() => renombrar(c.concurso_id)} className="text-green-600 hover:text-green-700" title="Guardar">
+                            <span className="material-symbols-outlined text-[18px]">check</span>
+                          </button>
+                          <button onClick={() => setEditId(null)} className="text-outline hover:text-red-600" title="Cancelar">
+                            <span className="material-symbols-outlined text-[18px]">close</span>
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 group">
+                          <Link href={`/concursos/${c.concurso_id}`} className="text-sm font-semibold text-primary hover:underline">
+                            {c.nomenclatura}
+                          </Link>
+                          <button
+                            onClick={() => { setEditId(c.concurso_id); setEditVal(c.nomenclatura); }}
+                            className="opacity-0 group-hover:opacity-100 text-outline hover:text-primary transition-opacity"
+                            title="Renombrar"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                          </button>
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-xs text-outline whitespace-nowrap">{fmtFechaHora(c.creado_en)}</td>
                     <td className="px-5 py-3.5">
