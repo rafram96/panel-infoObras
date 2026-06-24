@@ -256,21 +256,24 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                         )}
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap">
-                        <Link href={`/concursos/${id}/jobs/${j.job_id}`}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/25 transition-colors">
-                          Abrir análisis
-                          <span className="material-symbols-outlined text-[15px]">chevron_right</span>
-                        </Link>
-                        {j.excel_final && (
-                          <a href={j.excel_final} download
-                            className="ml-3 inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
-                            <span className="material-symbols-outlined text-base">download</span> Excel
-                          </a>
-                        )}
-                        <button onClick={() => borrarJob(j)} title="Borrar análisis"
-                          className="ml-3 align-middle text-outline hover:text-red-600 transition-colors">
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/concursos/${id}/jobs/${j.job_id}`}
+                            className="inline-flex items-center gap-1 h-8 px-3 rounded-lg bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/25 transition-colors">
+                            Abrir análisis
+                            <span className="material-symbols-outlined text-[15px]">chevron_right</span>
+                          </Link>
+                          {j.excel_final && (
+                            <a href={j.excel_final} download title="Descargar Excel final"
+                              className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-outline-variant/30 text-secondary text-xs font-medium hover:text-primary hover:border-primary/40 transition-colors">
+                              <span className="material-symbols-outlined text-[16px]">download</span> Excel
+                            </a>
+                          )}
+                          <span className="w-px h-5 bg-outline-variant/25" />
+                          <button onClick={() => borrarJob(j)} title="Borrar análisis"
+                            className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-outline hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors">
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
