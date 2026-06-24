@@ -5,6 +5,7 @@
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
+import { ModalConfirmar } from "@/components/ModalConfirmar";
 import {
   type ConcursoConJobs, type PivoteJob,
   ETAPAS_ORDEN, JOB_ESTADO_UI, pendientesHumano, fmtFechaHora,
@@ -49,9 +50,11 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
     if (r.ok) { setEditando(false); cargar(); }
   };
 
-  const borrarJob = async (j: PivoteJob) => {
-    const quien = j.postor ? j.postor.split("=")[0].trim() : "este análisis";
-    if (!window.confirm(`¿Borrar el análisis de ${quien}? Esto es irreversible.`)) return;
+  const [jobABorrar, setJobABorrar] = useState<PivoteJob | null>(null);
+  const confirmarBorrarJob = async () => {
+    const j = jobABorrar;
+    if (!j) return;
+    setJobABorrar(null);
     const r = await fetch(`/api/pivote/jobs/${j.job_id}`, { method: "DELETE" });
     if (r.ok) cargar();
   };
@@ -269,7 +272,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                             </a>
                           )}
                           <span className="w-px h-5 bg-outline-variant/25" />
-                          <button onClick={() => borrarJob(j)} title="Borrar análisis"
+                          <button onClick={() => setJobABorrar(j)} title="Borrar análisis"
                             className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-outline hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors">
                             <span className="material-symbols-outlined text-[18px]">delete</span>
                           </button>
@@ -283,6 +286,15 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
           </div>
         )}
       </section>
+
+      <ModalConfirmar
+        abierto={jobABorrar != null}
+        titulo="Borrar análisis"
+        mensaje={`Se eliminará el análisis de ${jobABorrar?.postor?.split("=")[0].trim() ?? "este postor"} con todos sus archivos (Excel, ZIP, documentos).`}
+        detalle="Esta acción es irreversible."
+        onConfirmar={confirmarBorrarJob}
+        onCancelar={() => setJobABorrar(null)}
+      />
     </PanelShell>
   );
 }

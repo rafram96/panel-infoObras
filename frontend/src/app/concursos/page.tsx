@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
+import { ModalConfirmar } from "@/components/ModalConfirmar";
 import { type Concurso, fmtFechaHora } from "@/lib/pivote/types";
 
 type ConcursoResumen = Concurso & { n_jobs: number; pendientes: number };
@@ -55,11 +56,11 @@ export default function ConcursosPage() {
     if (r.ok) cargar();
   };
 
-  const borrarConcurso = async (c: ConcursoResumen) => {
-    const msg = c.n_jobs > 0
-      ? `¿Borrar el concurso "${c.nomenclatura}" y sus ${c.n_jobs} análisis? Esto es irreversible.`
-      : `¿Borrar el concurso "${c.nomenclatura}"? Esto es irreversible.`;
-    if (!window.confirm(msg)) return;
+  const [concABorrar, setConcABorrar] = useState<ConcursoResumen | null>(null);
+  const confirmarBorrarConcurso = async () => {
+    const c = concABorrar;
+    if (!c) return;
+    setConcABorrar(null);
     const r = await fetch(`/api/pivote/concursos/${c.concurso_id}`, { method: "DELETE" });
     if (r.ok) cargar();
   };
@@ -222,7 +223,7 @@ export default function ConcursosPage() {
                           Abrir expediente
                           <span className="material-symbols-outlined text-base">chevron_right</span>
                         </Link>
-                        <button onClick={() => borrarConcurso(c)} title="Borrar concurso"
+                        <button onClick={() => setConcABorrar(c)} title="Borrar concurso"
                           className="text-outline hover:text-red-600 transition-colors">
                           <span className="material-symbols-outlined text-[18px]">delete</span>
                         </button>
@@ -235,6 +236,17 @@ export default function ConcursosPage() {
           </div>
         )}
       </section>
+
+      <ModalConfirmar
+        abierto={concABorrar != null}
+        titulo="Borrar concurso"
+        mensaje={concABorrar
+          ? `Se eliminará "${concABorrar.nomenclatura}"${concABorrar.n_jobs > 0 ? ` y sus ${concABorrar.n_jobs} análisis` : ""}, con todos sus archivos.`
+          : ""}
+        detalle="Esta acción es irreversible."
+        onConfirmar={confirmarBorrarConcurso}
+        onCancelar={() => setConcABorrar(null)}
+      />
     </PanelShell>
   );
 }
