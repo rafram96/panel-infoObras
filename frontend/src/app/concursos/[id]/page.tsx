@@ -187,7 +187,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
             <table className="w-full text-left">
               <thead className="bg-surface-container-high">
                 <tr>
-                  {["Postor", "Fecha", "Origen", "Estado", "Puntaje", "Pipeline", "Alertas", "A revisión", "Acciones"].map((h) => (
+                  {["Postor", "Fecha", "Origen", "Estado", "Puntaje", "Etapas", "Alertas", "A revisión", "Acciones"].map((h) => (
                     <th key={h} className="px-5 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
                   ))}
                 </tr>
@@ -201,7 +201,10 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                   return (
                     <tr key={j.job_id} className="hover:bg-surface-container-high/40 transition-colors">
                       <td className="px-5 py-3">
-                        <p className="text-sm text-primary font-medium truncate max-w-[260px]">{j.postor ?? j.analisis_id}</p>
+                        <Link href={`/concursos/${id}/jobs/${j.job_id}`}
+                          className="block text-sm text-primary font-medium truncate max-w-[260px] hover:underline">
+                          {j.postor ?? j.analisis_id}
+                        </Link>
                         <p className="text-[0.6875rem] font-mono text-outline">{j.analisis_id}</p>
                       </td>
                       <td className="px-5 py-3 text-xs text-outline whitespace-nowrap">{fmtFechaHora(j.creado_en)}</td>

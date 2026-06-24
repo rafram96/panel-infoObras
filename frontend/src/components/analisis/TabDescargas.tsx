@@ -4,6 +4,7 @@
  *  documentos InfoObras y acceso a la cola de revisión humana. */
 import Link from "next/link";
 import type { PivoteJob } from "@/lib/pivote/types";
+import { BarraProgreso } from "@/components/BarraProgreso";
 
 export function TabDescargas({ job, pend, id, jobId }: {
   job: PivoteJob; pend: number; id: string; jobId: string;
@@ -51,10 +52,13 @@ export function TabDescargas({ job, pend, id, jobId }: {
             <span className="material-symbols-outlined text-base">error</span> Error al preparar el ZIP — reintenta más tarde
           </span>
         ) : (
-          <span className="mt-auto text-xs font-medium text-amber-600 inline-flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
-            Preparando ZIP… (descargando documentos)
-          </span>
+          <div className="mt-auto">
+            <p className="text-xs font-medium text-amber-600 mb-1.5 inline-flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+              Preparando ZIP… (descargando documentos)
+            </p>
+            <BarraProgreso />
+          </div>
         )}
       </div>
 
