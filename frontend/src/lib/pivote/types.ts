@@ -101,6 +101,9 @@ export interface PivoteJob {
   items_revision: ItemRevision[];
   excel_final?: string | null;
   zip_infoobras?: string | null;
+  /** Descarga diferida de documentos InfoObras (lo que arma el ZIP). El ZIP solo
+   *  se puede bajar cuando es "listas". */
+  descargas_estado?: "pendiente" | "en_progreso" | "listas" | "error" | null;
   creado_en?: string | null;
   actualizado_en?: string | null;
 }
@@ -124,12 +127,15 @@ export interface ConcursoConJobs extends Concurso {
  */
 export interface VeredictoProfesional {
   n_prof: number;
-  cargo: string;
+  cargo: string;                   // etiqueta literal del cargo en la propuesta (sin "(cargo bases N°…)")
+  cargo_bases_num?: number | null; // cargo equivalente en el Cuadro de Personal de las bases
+  cargo_bases_nombre?: string | null;
   nombre: string;
   cumple_claude: string;           // "SÍ — 3.96 años"
   anios_brutos: number;
   cumple_backend?: string | null;  // "NO CUMPLE — 1.55 años efectivos" (null = sin cambio)
   anios_efectivos?: number | null;
+  minimo_anios?: number | null;    // mínimo de experiencia exigido al cargo por las bases
   motivo_backend?: string | null;  // "2 paralizaciones (obra CUI …): −212 días"
   fuente?: string | null;          // "InfoObras · consultado 2026-06-10"
 }
@@ -146,6 +152,7 @@ export interface AlertaResumen {
 
 export interface FactorResumen {
   factor: string;
+  criterio?: string | null;        // nombre del factor ("Experiencia adicional del personal clave")
   puntaje: number | string | null; // número o "NO APLICA"
   detalle?: string | null;
 }
