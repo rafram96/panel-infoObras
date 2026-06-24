@@ -31,12 +31,24 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
   const { id } = use(params);
   const [data, setData] = useState<ConcursoConJobs | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
+  const [editNom, setEditNom] = useState("");
+  const [editEnt, setEditEnt] = useState("");
 
   const cargar = useCallback(async () => {
     const r = await fetch(`/api/pivote/concursos/${id}`);
     if (!r.ok) { setError("Concurso no encontrado"); return; }
     setData(await r.json());
   }, [id]);
+
+  const guardarEdicion = async () => {
+    const r = await fetch(`/api/pivote/concursos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nomenclatura: editNom.trim(), entidad: editEnt.trim() }),
+    });
+    if (r.ok) { setEditando(false); cargar(); }
+  };
 
   // puntaje técnico por postor (para comparar de un vistazo) — se re-pide solo
   // cuando cambia el conjunto de análisis, no en cada auto-refresh.
@@ -91,6 +103,12 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
           <span className="material-symbols-outlined text-base">arrow_back</span> Concursos
         </Link>
         <div className="flex-1" />
+        <button
+          onClick={() => { setEditNom(data.nomenclatura); setEditEnt(data.entidad ?? ""); setEditando((v) => !v); }}
+          className="inline-flex items-center gap-1.5 bg-surface-container-high text-on-surface-variant text-xs font-semibold px-4 py-2 rounded-lg hover:bg-surface-container-highest transition-colors"
+        >
+          <span className="material-symbols-outlined text-base">edit</span> Editar
+        </button>
         <Link
           href={`/concursos/${id}/nuevo`}
           className="inline-flex items-center gap-1.5 primary-gradient text-white text-xs font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90"
@@ -99,6 +117,26 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
           Subir análisis manual
         </Link>
       </div>
+
+      {/* form editar concurso (nombre + entidad) — persistente vía PATCH */}
+      {editando && (
+        <div className="mb-6 p-5 rounded-xl bg-surface-container-lowest shadow-ambient border border-outline-variant/10 flex flex-wrap gap-3 items-end animate-[fadeIn_.2s_ease]">
+          <div className="flex-1 min-w-[260px]">
+            <label className="block text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">Nomenclatura *</label>
+            <input value={editNom} onChange={(e) => setEditNom(e.target.value)}
+              className="w-full h-10 px-3 rounded-lg bg-surface border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+          <div className="flex-1 min-w-[220px]">
+            <label className="block text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">Entidad convocante</label>
+            <input value={editEnt} onChange={(e) => setEditEnt(e.target.value)} placeholder="ESSALUD, Gobierno Regional de…"
+              className="w-full h-10 px-3 rounded-lg bg-surface border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+          <button onClick={guardarEdicion} disabled={!editNom.trim()}
+            className="h-10 px-5 rounded-lg primary-gradient text-white text-xs font-semibold disabled:opacity-40">Guardar</button>
+          <button onClick={() => setEditando(false)}
+            className="h-10 px-4 rounded-lg text-xs font-semibold text-outline hover:text-on-surface">Cancelar</button>
+        </div>
+      )}
 
       {/* métricas del expediente */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
