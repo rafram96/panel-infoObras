@@ -49,6 +49,13 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
     if (r.ok) { setEditando(false); cargar(); }
   };
 
+  const borrarJob = async (j: PivoteJob) => {
+    const quien = j.postor ? j.postor.split("=")[0].trim() : "este análisis";
+    if (!window.confirm(`¿Borrar el análisis de ${quien}? Esto es irreversible.`)) return;
+    const r = await fetch(`/api/pivote/jobs/${j.job_id}`, { method: "DELETE" });
+    if (r.ok) cargar();
+  };
+
   // puntaje técnico por postor (para comparar de un vistazo) — se re-pide solo
   // cuando cambia el conjunto de análisis, no en cada auto-refresh.
   const [puntajes, setPuntajes] = useState<Record<string, number | null>>({});
@@ -260,6 +267,10 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                             <span className="material-symbols-outlined text-base">download</span> Excel
                           </a>
                         )}
+                        <button onClick={() => borrarJob(j)} title="Borrar análisis"
+                          className="ml-3 align-middle text-outline hover:text-red-600 transition-colors">
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
                       </td>
                     </tr>
                   );

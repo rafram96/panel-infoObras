@@ -55,6 +55,15 @@ export default function ConcursosPage() {
     if (r.ok) cargar();
   };
 
+  const borrarConcurso = async (c: ConcursoResumen) => {
+    const msg = c.n_jobs > 0
+      ? `¿Borrar el concurso "${c.nomenclatura}" y sus ${c.n_jobs} análisis? Esto es irreversible.`
+      : `¿Borrar el concurso "${c.nomenclatura}"? Esto es irreversible.`;
+    if (!window.confirm(msg)) return;
+    const r = await fetch(`/api/pivote/concursos/${c.concurso_id}`, { method: "DELETE" });
+    if (r.ok) cargar();
+  };
+
   useEffect(() => {
     cargar();
     const t = setInterval(cargar, 8000); // los jobs del MCP llegan solos
@@ -207,11 +216,17 @@ export default function ConcursosPage() {
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <Link href={`/concursos/${c.concurso_id}`}
-                        className="inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
-                        Abrir expediente
-                        <span className="material-symbols-outlined text-base">chevron_right</span>
-                      </Link>
+                      <div className="inline-flex items-center gap-3">
+                        <Link href={`/concursos/${c.concurso_id}`}
+                          className="inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
+                          Abrir expediente
+                          <span className="material-symbols-outlined text-base">chevron_right</span>
+                        </Link>
+                        <button onClick={() => borrarConcurso(c)} title="Borrar concurso"
+                          className="text-outline hover:text-red-600 transition-colors">
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
