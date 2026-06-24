@@ -40,14 +40,12 @@ const concursos: Concurso[] = [
   {
     concurso_id: "c-demo-1",
     nomenclatura: "CP-02-2026/GOB.REG.DEMO/C",
-    entidad: "Gobierno Regional Demo",
     fecha_presentacion: "2026-05-20",
     creado_en: "2026-05-22T10:00:00Z",
   },
   {
     concurso_id: "c-demo-2",
     nomenclatura: "AS-15-2026/MUNI.DEMO",
-    entidad: "Municipalidad Provincial Demo",
     fecha_presentacion: "2026-04-02",
     creado_en: "2026-04-05T10:00:00Z",
   },
@@ -328,11 +326,10 @@ export const db = {
     });
   },
 
-  crearConcurso(datos: { nomenclatura: string; entidad?: string; fecha_presentacion?: string }): Concurso {
+  crearConcurso(datos: { nomenclatura: string; fecha_presentacion?: string }): Concurso {
     const nuevo: Concurso = {
       concurso_id: `c-nuevo-${secuencia++}`,
       nomenclatura: datos.nomenclatura,
-      entidad: datos.entidad ?? null,
       fecha_presentacion: datos.fecha_presentacion ?? null,
       creado_en: new Date().toISOString(),
     };

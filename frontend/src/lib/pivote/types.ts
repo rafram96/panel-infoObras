@@ -111,7 +111,6 @@ export interface PivoteJob {
 export interface Concurso {
   concurso_id: string;
   nomenclatura: string;
-  entidad?: string | null;
   fecha_presentacion?: string | null;
   creado_en?: string | null;
 }

@@ -33,7 +33,6 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
   const [editNom, setEditNom] = useState("");
-  const [editEnt, setEditEnt] = useState("");
 
   const cargar = useCallback(async () => {
     const r = await fetch(`/api/pivote/concursos/${id}`);
@@ -45,7 +44,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
     const r = await fetch(`/api/pivote/concursos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nomenclatura: editNom.trim(), entidad: editEnt.trim() }),
+      body: JSON.stringify({ nomenclatura: editNom.trim() }),
     });
     if (r.ok) { setEditando(false); cargar(); }
   };
@@ -96,7 +95,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
   const criticasTotal = data.jobs.reduce((s, j) => s + alertasJob(j).criticas, 0);
 
   return (
-    <PanelShell title={data.nomenclatura} subtitle={data.entidad ?? undefined}>
+    <PanelShell title={data.nomenclatura}>
       {/* barra superior */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <Link href="/concursos" className="inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
@@ -104,7 +103,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
         </Link>
         <div className="flex-1" />
         <button
-          onClick={() => { setEditNom(data.nomenclatura); setEditEnt(data.entidad ?? ""); setEditando((v) => !v); }}
+          onClick={() => { setEditNom(data.nomenclatura); setEditando((v) => !v); }}
           className="inline-flex items-center gap-1.5 bg-surface-container-high text-on-surface-variant text-xs font-semibold px-4 py-2 rounded-lg hover:bg-surface-container-highest transition-colors"
         >
           <span className="material-symbols-outlined text-base">edit</span> Editar
@@ -118,17 +117,12 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
         </Link>
       </div>
 
-      {/* form editar concurso (nombre + entidad) — persistente vía PATCH */}
+      {/* form editar concurso (nombre) — persistente vía PATCH */}
       {editando && (
         <div className="mb-6 p-5 rounded-xl bg-surface-container-lowest shadow-ambient border border-outline-variant/10 flex flex-wrap gap-3 items-end animate-[fadeIn_.2s_ease]">
           <div className="flex-1 min-w-[260px]">
             <label className="block text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">Nomenclatura *</label>
             <input value={editNom} onChange={(e) => setEditNom(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg bg-surface border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50" />
-          </div>
-          <div className="flex-1 min-w-[220px]">
-            <label className="block text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">Entidad convocante</label>
-            <input value={editEnt} onChange={(e) => setEditEnt(e.target.value)} placeholder="ESSALUD, Gobierno Regional de…"
               className="w-full h-10 px-3 rounded-lg bg-surface border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50" />
           </div>
           <button onClick={guardarEdicion} disabled={!editNom.trim()}

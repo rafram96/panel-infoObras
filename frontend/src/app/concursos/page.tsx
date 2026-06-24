@@ -31,7 +31,6 @@ export default function ConcursosPage() {
   const [filtro, setFiltro] = useState("");
   const [creando, setCreando] = useState(false);
   const [nomenclatura, setNomenclatura] = useState("");
-  const [entidad, setEntidad] = useState("");
 
   const cargar = useCallback(async () => {
     try {
@@ -53,10 +52,10 @@ export default function ConcursosPage() {
     const r = await fetch("/api/pivote/concursos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nomenclatura: nomenclatura.trim(), entidad: entidad.trim() || undefined }),
+      body: JSON.stringify({ nomenclatura: nomenclatura.trim() }),
     });
     if (r.ok) {
-      setNomenclatura(""); setEntidad(""); setCreando(false);
+      setNomenclatura(""); setCreando(false);
       cargar();
     }
   };
@@ -64,7 +63,7 @@ export default function ConcursosPage() {
   const visibles = concursos
     .filter((c) => {
       const q = filtro.toLowerCase();
-      return !q || c.nomenclatura.toLowerCase().includes(q) || (c.entidad ?? "").toLowerCase().includes(q);
+      return !q || c.nomenclatura.toLowerCase().includes(q);
     })
     .sort((a, b) => (b.creado_en ?? "").localeCompare(a.creado_en ?? ""));  // más reciente primero
 
@@ -87,7 +86,7 @@ export default function ConcursosPage() {
           <input
             value={filtro}
             onChange={(e) => setFiltro(e.target.value)}
-            placeholder="Buscar por nomenclatura o entidad…"
+            placeholder="Buscar por nomenclatura…"
             className="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-lowest border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50 shadow-ambient"
           />
         </div>
@@ -114,17 +113,6 @@ export default function ConcursosPage() {
               className="w-full h-10 px-3 rounded-lg bg-surface border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50"
             />
           </div>
-          <div className="flex-1 min-w-[220px]">
-            <label className="block text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">
-              Entidad convocante
-            </label>
-            <input
-              value={entidad}
-              onChange={(e) => setEntidad(e.target.value)}
-              placeholder="Gobierno Regional de…"
-              className="w-full h-10 px-3 rounded-lg bg-surface border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50"
-            />
-          </div>
           <button
             onClick={crear}
             disabled={!nomenclatura.trim()}
@@ -148,7 +136,7 @@ export default function ConcursosPage() {
             <table className="w-full text-left">
               <thead className="bg-surface-container-high">
                 <tr>
-                  {["Concurso", "Fecha", "Entidad", "Postores", "A revisión", ""].map((h, i) => (
+                  {["Concurso", "Fecha", "Postores", "A revisión", ""].map((h, i) => (
                     <th key={i} className="px-5 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
                   ))}
                 </tr>
@@ -162,7 +150,6 @@ export default function ConcursosPage() {
                       </Link>
                     </td>
                     <td className="px-5 py-3.5 text-xs text-outline whitespace-nowrap">{fmtFechaHora(c.creado_en)}</td>
-                    <td className="px-5 py-3.5 text-xs text-outline">{c.entidad ?? "—"}</td>
                     <td className="px-5 py-3.5">
                       <span className="px-2.5 py-0.5 rounded bg-surface-container-high text-[0.6875rem] font-bold text-on-surface-variant">
                         {c.n_jobs}
