@@ -39,7 +39,10 @@ export function TabDescargas({ job, pend, id, jobId }: {
           en carpetas por profesional y experiencia — para revisarlos tú mismo.
         </p>
         {job.descargas_estado === "listas" ? (
-          <a href={`/api/pivote/jobs/${jobId}/zip`} download
+          // DIRECTO al backend (no por el proxy de Next.js: no puede streamear GBs
+          // → ECONNRESET). NEXT_PUBLIC_PIVOTE_API = URL del backend alcanzable por el
+          // browser (LAN); vacío → cae al proxy (ok solo para archivos chicos).
+          <a href={`${process.env.NEXT_PUBLIC_PIVOTE_API ?? ""}/api/pivote/jobs/${jobId}/zip`} download
             className="mt-auto self-start inline-flex items-center gap-1.5 primary-gradient text-white text-xs font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90">
             <span className="material-symbols-outlined text-base">download</span> Descargar .zip
           </a>
