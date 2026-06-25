@@ -15,8 +15,14 @@ RUN npm ci
 # Código del panel (sin .env.local ni node_modules — ver .dockerignore).
 COPY . .
 
-# Build de producción. PIVOTE_API se resuelve en RUNTIME (next.config lee
-# process.env al arrancar), no aquí.
+# URL del backend alcanzable por el BROWSER de Manuel (LAN). Es NEXT_PUBLIC_* →
+# Next la HORNEA en build-time en el bundle del cliente; el panel la usa para bajar
+# el ZIP DIRECTO del backend (el proxy de Next no streamea archivos de GBs → .txt).
+ARG NEXT_PUBLIC_PIVOTE_API
+ENV NEXT_PUBLIC_PIVOTE_API=${NEXT_PUBLIC_PIVOTE_API}
+
+# Build de producción. PIVOTE_API (el proxy server-side) se resuelve en RUNTIME
+# (next.config lee process.env al arrancar), no aquí.
 RUN npm run build
 
 EXPOSE 3002
