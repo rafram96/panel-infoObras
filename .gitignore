@@ -11,3 +11,7 @@ __pycache__/
 frontend/.next/
 frontend/node_modules/
 venv/
+
+# Config local (URLs del backend) y settings de Claude Code — NO commitear.
+frontend/.env*.local
+.claude/
