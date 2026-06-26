@@ -52,7 +52,7 @@ export default function Sidebar() {
               InfoObras
             </span>
             <p className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">
-              Analyzer Framework
+              Evaluación de propuestas
             </p>
           </div>
 

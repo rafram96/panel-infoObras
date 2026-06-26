@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "InfoObras Analyzer",
-  description: "Procesamiento OCR y segmentación de profesionales",
+  title: "InfoObras — Evaluación de propuestas",
+  description: "Evaluación de propuestas técnicas en concursos OSCE",
 };
 
 // Script anti-flash: aplica la clase .dark al <html> ANTES del render

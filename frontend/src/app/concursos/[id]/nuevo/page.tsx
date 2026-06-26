@@ -144,7 +144,7 @@ export default function NuevoAnalisisPivote({ params }: { params: Promise<{ id: 
             onFile={(f) => setExcel({ file: f })}
           />
           <Zona
-            label="Archivo de datos (JSON)"
+            label="Archivo de datos (.json)"
             hint="lo genera Claude junto con el Excel; se revisa al instante"
             icon="data_object"
             acepta={(f) => f.name.endsWith(".json")}
