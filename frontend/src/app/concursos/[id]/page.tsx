@@ -6,6 +6,9 @@ import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
 import { ModalConfirmar } from "@/components/ModalConfirmar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Badge } from "@/components/Badge";
+import { SkeletonTabla, SkeletonMetricas } from "@/components/Skeleton";
 import {
   type ConcursoConJobs, type PivoteJob,
   ETAPAS_ORDEN, JOB_ESTADO_UI, pendientesHumano, fmtFechaHora,
@@ -21,7 +24,7 @@ function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
         <span className={`material-symbols-outlined text-xl ${color}`}>{icon}</span>
       </div>
       <div>
-        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
+        <p className="text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
         <p className={`text-2xl font-bold ${color}`}>{value}</p>
       </div>
     </div>
@@ -88,7 +91,16 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
   }, [cargar]);
 
   if (error) return <PanelShell title="Concurso"><p className="text-sm text-red-600">{error}</p></PanelShell>;
-  if (!data) return <PanelShell title="Concurso"><p className="text-sm text-outline">Cargando…</p></PanelShell>;
+  if (!data) return (
+    <PanelShell title="Concurso">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <SkeletonMetricas n={4} />
+      </section>
+      <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
+        <SkeletonTabla filas={4} columnas={5} />
+      </div>
+    </PanelShell>
+  );
 
   const etapasOk = (j: PivoteJob) =>
     j.etapas.filter((e) => ["ok", "ok_con_revision", "error_parcial"].includes(e.estado)).length;
@@ -106,11 +118,14 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
 
   return (
     <PanelShell title={data.nomenclatura}>
+      <Breadcrumbs
+        items={[
+          { label: "Concursos", href: "/concursos" },
+          { label: data.nomenclatura },
+        ]}
+      />
       {/* barra superior */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
-        <Link href="/concursos" className="inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
-          <span className="material-symbols-outlined text-base">arrow_back</span> Concursos
-        </Link>
         <div className="flex-1" />
         <button
           onClick={() => { setEditNom(data.nomenclatura); setEditando((v) => !v); }}
@@ -131,7 +146,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
       {editando && (
         <div className="mb-6 p-5 rounded-xl bg-surface-container-lowest shadow-ambient border border-outline-variant/10 flex flex-wrap gap-3 items-end animate-[fadeIn_.2s_ease]">
           <div className="flex-1 min-w-[260px]">
-            <label className="block text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">Nomenclatura *</label>
+            <label className="block text-micro font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">Nomenclatura *</label>
             <input value={editNom} onChange={(e) => setEditNom(e.target.value)}
               className="w-full h-10 px-3 rounded-lg bg-surface border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50" />
           </div>
@@ -146,7 +161,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <MetricCard icon="groups" label="Postores" value={String(data.jobs.length)} />
         <MetricCard icon="task_alt" label="Completados" value={String(completados)} />
-        <MetricCard icon="pending_actions" label="A revisión" value={String(pendTotal)}
+        <MetricCard icon="pending_actions" label="Por confirmar" value={String(pendTotal)}
           accent={pendTotal > 0 ? "ambar" : undefined} borde={pendTotal > 0 ? "border-amber-500" : "border-primary"} />
         <MetricCard icon="notification_important" label="Alertas críticas" value={String(criticasTotal)}
           accent={criticasTotal > 0 ? "rojo" : undefined} borde={criticasTotal > 0 ? "border-red-500" : "border-primary"} />
@@ -160,7 +175,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
           una propuesta — esta vista se actualiza automáticamente.
           El botón de subida manual es solo la alternativa.
         </p>
-        <span className="ml-auto flex items-center gap-1.5 text-[0.6875rem] font-semibold text-green-600 whitespace-nowrap">
+        <span className="ml-auto flex items-center gap-1.5 text-micro font-semibold text-green-600 whitespace-nowrap">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
@@ -179,16 +194,20 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
         </div>
 
         {data.jobs.length === 0 ? (
-          <div className="px-5 py-10 text-center text-sm text-outline">
-            Aún no hay postores analizados en este concurso.
+          <div className="px-5 py-14 flex flex-col items-center text-center gap-3">
+            <span className="material-symbols-outlined text-5xl text-outline-variant" aria-hidden="true">groups</span>
+            <p className="text-sm text-on-surface-variant max-w-sm">
+              Aún no hay postores en este concurso. Los análisis aparecen aquí solos
+              cuando se evalúa una propuesta desde Claude.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-surface-container-high">
                 <tr>
-                  {["Postor", "Fecha", "Origen", "Estado", "Puntaje", "Etapas", "Alertas", "A revisión", "Acciones"].map((h) => (
-                    <th key={h} className="px-5 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
+                  {["Postor", "Fecha", "Origen", "Estado", "Puntaje", "Pasos", "Alertas", "Por confirmar", "Acciones"].map((h) => (
+                    <th key={h} scope="col" className="px-5 py-3 text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -205,22 +224,18 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                           className="block text-sm text-primary font-medium truncate max-w-[260px] hover:underline">
                           {j.postor ?? j.analisis_id}
                         </Link>
-                        <p className="text-[0.6875rem] font-mono text-outline">{j.analisis_id}</p>
+                        <p className="text-micro font-mono text-outline">{j.analisis_id}</p>
                       </td>
                       <td className="px-5 py-3 text-xs text-outline whitespace-nowrap">{fmtFechaHora(j.creado_en)}</td>
                       <td className="px-5 py-3">
                         {j.origen === "mcp" ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary text-[0.6875rem] font-semibold">
-                            <span className="material-symbols-outlined text-[13px]">bolt</span> Claude
-                          </span>
+                          <Badge tono="acento" icono="bolt" chico>Claude</Badge>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-outline text-[0.6875rem] font-semibold">
-                            <span className="material-symbols-outlined text-[13px]">upload_file</span> manual
-                          </span>
+                          <Badge tono="info" icono="upload_file" chico>manual</Badge>
                         )}
                       </td>
                       <td className="px-5 py-3">
-                        <span className={`inline-block px-2.5 py-0.5 rounded text-[0.6875rem] font-semibold ${ui.cls}`}>{ui.label}</span>
+                        <span className={`inline-block px-2.5 py-0.5 rounded text-micro font-semibold ${ui.cls}`}>{ui.label}</span>
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap">
                         {puntajes[j.job_id] != null ? (
@@ -234,26 +249,18 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                           <div className="w-20 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                             <div className="h-full bg-primary rounded-full" style={{ width: `${(ok / ETAPAS_ORDEN.length) * 100}%` }} />
                           </div>
-                          <span className="text-[0.6875rem] text-outline">{ok}/{ETAPAS_ORDEN.length}</span>
+                          <span className="text-micro text-outline">{ok}/{ETAPAS_ORDEN.length}</span>
                         </div>
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap">
-                        {al.criticas > 0 && (
-                          <span className="mr-1 px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 text-[0.6875rem] font-bold">
-                            {al.criticas} crít.
-                          </span>
-                        )}
-                        {al.alertas > 0 && (
-                          <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 text-[0.6875rem] font-bold">
-                            {al.alertas}
-                          </span>
-                        )}
+                        {al.criticas > 0 && <Badge tono="error" chico className="mr-1">{al.criticas} crít.</Badge>}
+                        {al.alertas > 0 && <Badge tono="alerta" chico>{al.alertas}</Badge>}
                         {al.criticas === 0 && al.alertas === 0 && <span className="text-xs text-outline">—</span>}
                       </td>
                       <td className="px-5 py-3">
                         {pend > 0 ? (
                           <Link href={`/concursos/${id}/jobs/${j.job_id}/revision`}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-[0.6875rem] font-bold hover:underline">
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-micro font-bold hover:underline">
                             <span className="material-symbols-outlined text-[13px]">pending_actions</span>
                             {pend}
                           </Link>
@@ -275,7 +282,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
                             </a>
                           )}
                           <span className="w-px h-5 bg-outline-variant/25" />
-                          <button onClick={() => setJobABorrar(j)} title="Borrar análisis"
+                          <button onClick={() => setJobABorrar(j)} title="Borrar análisis" aria-label="Borrar análisis"
                             className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-outline hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors">
                             <span className="material-symbols-outlined text-[18px]">delete</span>
                           </button>

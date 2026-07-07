@@ -7,6 +7,9 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Badge } from "@/components/Badge";
+import { Skeleton, SkeletonMetricas } from "@/components/Skeleton";
 import {
   type PivoteJob, type ResumenAnalisis, type SaludPortal,
   ETAPA_LABEL, ETAPAS_ORDEN, JOB_ESTADO_UI, pendientesHumano,
@@ -30,12 +33,14 @@ function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
         <span className={`material-symbols-outlined text-xl ${color}`}>{icon}</span>
       </div>
       <div>
-        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
+        <p className="text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
         <p className={`text-2xl font-bold ${color}`}>{value}</p>
       </div>
     </div>
   );
 }
+
+type TabId = "pasos" | "profesionales" | "veredictos" | "factores" | "alertas" | "descargas";
 
 // ── página ────────────────────────────────────────────────────────────────────
 export default function JobPivote({ params }: { params: Promise<{ id: string; jobId: string }> }) {
@@ -46,7 +51,9 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
   const [salud, setSalud] = useState<SaludPortal[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
-  const [tab, setTab] = useState<"pasos" | "profesionales" | "veredictos" | "factores" | "alertas" | "descargas">("profesionales");
+  const [tab, setTab] = useState<TabId>("pasos");
+  const tabTocado = useRef(false);
+  const irTab = (t: TabId) => { tabTocado.current = true; setTab(t); };
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const cargar = useCallback(async () => {
@@ -80,6 +87,12 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
     }
   }, [job?.estado, job?.descargas_estado, cargar]);
 
+  // Al terminar, mostrar los Resultados (lo que el evaluador viene a ver), salvo
+  // que ya haya cambiado de pestaña a mano mientras corría la verificación.
+  useEffect(() => {
+    if (resumen && !tabTocado.current) setTab("veredictos");
+  }, [resumen]);
+
   if (error) return (
     <PanelShell title="Análisis">
       <div className="flex flex-col items-start gap-3">
@@ -93,7 +106,17 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
       </div>
     </PanelShell>
   );
-  if (!job) return <PanelShell title="Análisis"><p className="text-sm text-outline">Cargando…</p></PanelShell>;
+  if (!job) return (
+    <PanelShell title="Análisis">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <SkeletonMetricas n={4} />
+      </section>
+      <div className="space-y-3">
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    </PanelShell>
+  );
 
   const ui = JOB_ESTADO_UI[job.estado];
   const pend = pendientesHumano(job);
@@ -118,17 +141,20 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
 
   return (
     <PanelShell title={job.postor ?? job.analisis_id} subtitle={job.concurso ?? undefined}>
+      <Breadcrumbs
+        items={[
+          { label: "Concursos", href: "/concursos" },
+          { label: job.concurso ?? "Expediente", href: `/concursos/${id}` },
+          { label: job.postor ?? job.analisis_id },
+        ]}
+      />
       {/* barra superior */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
-        <Link href={`/concursos/${id}`} className="inline-flex items-center gap-1 text-xs text-secondary hover:text-primary transition-colors">
-          <span className="material-symbols-outlined text-base">arrow_back</span> Expediente
-        </Link>
-        <span className={`px-2.5 py-0.5 rounded text-[0.6875rem] font-semibold ${ui.cls}`}>{ui.label}</span>
+        <span className={`px-2.5 py-0.5 rounded text-micro font-semibold ${ui.cls}`}>{ui.label}</span>
         {job.origen === "mcp" && (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-primary/10 text-primary text-[0.6875rem] font-semibold"
-            title="Llegó automáticamente desde la sesión de Claude">
-            <span className="material-symbols-outlined text-[14px]">bolt</span> desde Claude
-          </span>
+          <Badge tono="acento" icono="bolt" title="Llegó automáticamente desde la sesión de Claude">
+            desde Claude
+          </Badge>
         )}
         <span className="text-xs font-mono text-outline">{job.analisis_id}</span>
       </div>
@@ -182,6 +208,44 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
         </Link>
       )}
 
+      {/* CTA · alertas críticas — salta a la pestaña Alertas (sin cazar pestañas) */}
+      {criticas > 0 && (
+        <button onClick={() => irTab("alertas")}
+          className="group w-full mb-6 flex items-center gap-3 rounded-xl border border-red-500/40 bg-red-50 dark:bg-red-950/30 px-5 py-4 text-left hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+          <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">notification_important</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-800 dark:text-red-200">
+              {criticas} {criticas === 1 ? "alerta crítica" : "alertas críticas"} en esta propuesta
+            </p>
+            <p className="text-xs text-red-700/80 dark:text-red-300/70">
+              Conviene revisarlas antes de dar el resultado por definitivo.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-red-700 dark:text-red-300 group-hover:gap-2 transition-all whitespace-nowrap">
+            Ver alertas <span className="material-symbols-outlined text-base">arrow_forward</span>
+          </span>
+        </button>
+      )}
+
+      {/* Estado positivo · verificación completa sin pendientes ni alertas críticas */}
+      {job.estado === "completado" && pend === 0 && criticas === 0 && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-green-500/40 bg-green-50 dark:bg-green-950/30 px-5 py-4">
+          <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-2xl">task_alt</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-green-800 dark:text-green-200">Verificación completa</p>
+            <p className="text-xs text-green-700/80 dark:text-green-300/70">
+              Sin casos por confirmar ni alertas críticas. El Excel final está listo.
+            </p>
+          </div>
+          {job.excel_final && (
+            <a href={job.excel_final} download
+              className="inline-flex items-center gap-1.5 primary-gradient text-white text-xs font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
+              <span className="material-symbols-outlined text-base">download</span> Descargar Excel
+            </a>
+          )}
+        </div>
+      )}
+
       {/* banner de salud de portales */}
       {portalesCaidos.length > 0 && (
         <div className="mb-6 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-xl p-4 flex items-start gap-3">
@@ -218,20 +282,21 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
       {/* ── PESTAÑAS (subvistas) ── */}
       <nav className="flex flex-wrap gap-1 mb-6 border-b border-outline-variant/10">
         {([
-          ["pasos", "Pasos", "conveyor_belt", null],
+          ["veredictos", "Resultados", "gavel", resumen?.veredictos.length ?? null],
           ["profesionales", "Profesionales", "groups", profesionales?.length ?? null],
-          ["veredictos", "Veredictos", "gavel", resumen?.veredictos.length ?? null],
           ["factores", "Factores", "grading", null],
           ["alertas", "Alertas", "notification_important", nAlertas || null],
+          ["pasos", "Pasos de la verificación", "conveyor_belt", null],
           ["descargas", "Descargas", "download", null],
         ] as const).map(([id, label, icon, badge]) => (
-          <button key={id} onClick={() => setTab(id)}
-            className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+          <button key={id} onClick={() => irTab(id)}
+            aria-current={tab === id ? "page" : undefined}
+            className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border-b-2 -mb-px transition-colors rounded-t focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
               tab === id ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-primary"}`}>
             <span className="material-symbols-outlined text-[18px]">{icon}</span>
             {label}
             {badge != null && (
-              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-surface-container-high text-[0.625rem] font-bold text-outline">{badge}</span>
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-surface-container-high text-nano font-bold text-outline">{badge}</span>
             )}
           </button>
         ))}

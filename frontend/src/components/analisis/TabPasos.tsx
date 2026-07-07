@@ -5,16 +5,17 @@
  *  como ramal paralelo. */
 import type { Observacion, PivoteJob, ResultadoEtapa } from "@/lib/pivote/types";
 import { ETAPA_LABEL, ETAPAS_ORDEN, SEVERIDAD_UI } from "@/lib/pivote/types";
+import { TONO, type Tono } from "@/lib/ui";
 import { fmtMs } from "./helpers";
 import { BarraProgreso } from "@/components/BarraProgreso";
 
-const ETAPA_UI: Record<string, { icon: string; circulo: string; texto: string }> = {
-  ok: { icon: "check", circulo: "bg-green-500 text-white", texto: "text-green-600 dark:text-green-400" },
-  ok_con_revision: { icon: "rule", circulo: "bg-amber-500 text-white", texto: "text-amber-600 dark:text-amber-400" },
-  error_parcial: { icon: "warning", circulo: "bg-orange-500 text-white", texto: "text-orange-600 dark:text-orange-400" },
-  error: { icon: "close", circulo: "bg-red-600 text-white", texto: "text-red-600 dark:text-red-400" },
-  en_curso: { icon: "sync", circulo: "bg-primary text-white", texto: "text-primary" },
-  pendiente: { icon: "", circulo: "bg-surface-container-high text-outline", texto: "text-outline" },
+const ETAPA_UI: Record<string, { icon: string; tono: Tono }> = {
+  ok: { icon: "check", tono: "ok" },
+  ok_con_revision: { icon: "rule", tono: "revision" },
+  error_parcial: { icon: "warning", tono: "alerta" },
+  error: { icon: "close", tono: "error" },
+  en_curso: { icon: "sync", tono: "acento" },
+  pendiente: { icon: "", tono: "info" },
 };
 
 const ESTADO_ETAPA_LABEL: Record<string, string> = {
@@ -39,11 +40,12 @@ function FilaEtapa({ res, nombre, abierta, onToggle }: {
       <button
         onClick={onToggle}
         disabled={!tieneDetalle}
+        aria-expanded={tieneDetalle ? abierta : undefined}
         className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
           tieneDetalle ? "hover:bg-surface-container-high/50 cursor-pointer" : "cursor-default"
         } ${abierta ? "bg-surface-container-high/40" : ""}`}
       >
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${ui.circulo}`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${TONO[ui.tono].solido}`}>
           {ui.icon ? (
             <span className={`material-symbols-outlined text-base ${estado === "en_curso" ? "animate-spin" : ""}`}>{ui.icon}</span>
           ) : (
@@ -51,26 +53,26 @@ function FilaEtapa({ res, nombre, abierta, onToggle }: {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-[0.8125rem] font-semibold ${ui.texto}`}>{nombre}</p>
-          <p className="text-[0.6875rem] text-outline">{ESTADO_ETAPA_LABEL[estado]}</p>
+          <p className={`text-dato font-semibold ${TONO[ui.tono].texto}`}>{nombre}</p>
+          <p className="text-micro text-outline">{ESTADO_ETAPA_LABEL[estado]}</p>
         </div>
         {m && m.items_total > 0 && (
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
-            <span className="px-2 py-0.5 rounded bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 text-[0.6875rem] font-bold">
+            <span className="px-2 py-0.5 rounded bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 text-micro font-bold">
               {m.items_ok}/{m.items_total}
             </span>
             {m.items_revision > 0 && (
-              <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-[0.6875rem] font-bold">
+              <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-micro font-bold">
                 {m.items_revision} revisión
               </span>
             )}
             {m.items_error > 0 && (
-              <span className="px-2 py-0.5 rounded bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 text-[0.6875rem] font-bold">
+              <span className="px-2 py-0.5 rounded bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 text-micro font-bold">
                 {m.items_error} error
               </span>
             )}
             {res!.observaciones.length > 0 && (
-              <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-[0.6875rem] font-bold">
+              <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-micro font-bold">
                 {res!.observaciones.length} obs.
               </span>
             )}
@@ -102,7 +104,7 @@ function FilaEtapa({ res, nombre, abierta, onToggle }: {
               ["Duración", fmtMs(res.metrica.duracion_ms)],
             ].map(([k, v]) => (
               <div key={k}>
-                <p className="text-[0.625rem] font-bold uppercase tracking-wide text-slate-500">{k}</p>
+                <p className="text-nano font-bold uppercase tracking-wide text-slate-500">{k}</p>
                 <p className="text-sm font-bold text-primary">{v}</p>
               </div>
             ))}
@@ -110,26 +112,26 @@ function FilaEtapa({ res, nombre, abierta, onToggle }: {
 
           {res.error && (
             <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50">
-              <p className="text-[0.75rem] font-mono text-red-700 dark:text-red-300">{res.error}</p>
+              <p className="text-xs font-mono text-red-700 dark:text-red-300">{res.error}</p>
             </div>
           )}
 
           {res.observaciones.length > 0 && (
             <div className="mt-3 space-y-2">
-              <p className="text-[0.625rem] font-bold uppercase tracking-wide text-slate-500">
+              <p className="text-nano font-bold uppercase tracking-wide text-slate-500">
                 Observaciones de este paso
               </p>
               {res.observaciones.map((o: Observacion, i) => {
                 const sui = SEVERIDAD_UI[o.severidad];
                 return (
                   <div key={i} className="flex items-start gap-2">
-                    <span className={`px-2 py-0.5 rounded text-[0.625rem] font-bold whitespace-nowrap ${sui.cls}`}>
+                    <span className={`px-2 py-0.5 rounded text-nano font-bold whitespace-nowrap ${sui.cls}`}>
                       {o.codigo ?? sui.label}
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[0.75rem] text-primary leading-snug">{o.mensaje}</p>
+                      <p className="text-xs text-primary leading-snug">{o.mensaje}</p>
                       {o.referencia && (
-                        <p className="text-[0.6875rem] font-mono text-outline">{o.referencia}</p>
+                        <p className="text-micro font-mono text-outline">{o.referencia}</p>
                       )}
                     </div>
                   </div>
@@ -158,7 +160,7 @@ export function TabPasos({ job, abiertas, onToggle }: {
           <span className="material-symbols-outlined text-xl">conveyor_belt</span>
           Pasos de la verificación
         </h2>
-        <span className="text-[0.6875rem] text-outline">haz clic en un paso para ver el detalle</span>
+        <span className="text-micro text-outline">haz clic en un paso para ver el detalle</span>
       </div>
       <div className="p-3">
         {previas.map((nombre) => (
@@ -168,8 +170,8 @@ export function TabPasos({ job, abiertas, onToggle }: {
 
         {/* rama paralela */}
         <div className="my-1 ml-4 pl-3 border-l-2 border-dashed border-primary/30 relative">
-          <span className="absolute -left-[1px] -top-1 -translate-x-full pr-2 text-[0.625rem] font-bold uppercase tracking-wide text-primary/60 select-none hidden sm:block" />
-          <p className="px-3 pt-1 text-[0.625rem] font-bold uppercase tracking-[0.1rem] text-primary/60">
+          <span className="absolute -left-[1px] -top-1 -translate-x-full pr-2 text-nano font-bold uppercase tracking-wide text-primary/60 select-none hidden sm:block" />
+          <p className="px-3 pt-1 text-nano font-bold uppercase tracking-[0.1rem] text-primary/60">
             Consultas simultáneas
           </p>
           {rama.map((nombre) => (

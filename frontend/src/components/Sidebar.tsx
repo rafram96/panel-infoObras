@@ -51,7 +51,7 @@ export default function Sidebar() {
             <span className="text-sm font-black uppercase tracking-[0.1rem] text-primary">
               InfoObras
             </span>
-            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">
+            <p className="text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">
               Evaluación de propuestas
             </p>
           </div>
@@ -62,6 +62,7 @@ export default function Sidebar() {
               <Link
                 key={href}
                 href={href}
+                aria-current={isActive(href) ? "page" : undefined}
                 className={
                   isActive(href)
                     ? "flex items-center px-3 h-10 bg-surface-container-lowest text-primary font-bold border-l-4 border-primary transition-colors duration-150"
@@ -78,14 +79,14 @@ export default function Sidebar() {
                 >
                   {icon}
                 </span>
-                <span className="text-[0.8125rem] font-medium">{label}</span>
+                <span className="text-dato font-medium">{label}</span>
               </Link>
             ))}
 
             {/* Herramientas section — solo si hay items (hoy oculta) */}
             {NAV_TOOLS.length > 0 && (
             <div className="pt-4 pb-1">
-              <span className="px-3 text-[0.6rem] font-bold uppercase tracking-[0.15rem] text-slate-400">
+              <span className="px-3 text-nano font-bold uppercase tracking-[0.15rem] text-slate-400">
                 Herramientas
               </span>
             </div>
@@ -94,6 +95,7 @@ export default function Sidebar() {
               <Link
                 key={href}
                 href={href}
+                aria-current={isActive(href) ? "page" : undefined}
                 className={
                   isActive(href)
                     ? "flex items-center px-3 h-10 bg-surface-container-lowest text-primary font-bold border-l-4 border-primary transition-colors duration-150"
@@ -110,14 +112,14 @@ export default function Sidebar() {
                 >
                   {icon}
                 </span>
-                <span className="text-[0.8125rem] font-medium">{label}</span>
+                <span className="text-dato font-medium">{label}</span>
               </Link>
             ))}
 
             {/* Información section — solo si hay items (hoy oculta) */}
             {NAV_INFO.length > 0 && (
             <div className="pt-4 pb-1">
-              <span className="px-3 text-[0.6rem] font-bold uppercase tracking-[0.15rem] text-slate-400">
+              <span className="px-3 text-nano font-bold uppercase tracking-[0.15rem] text-slate-400">
                 Información
               </span>
             </div>
@@ -126,6 +128,7 @@ export default function Sidebar() {
               <Link
                 key={href}
                 href={href}
+                aria-current={isActive(href) ? "page" : undefined}
                 className={
                   isActive(href)
                     ? "flex items-center px-3 h-10 bg-surface-container-lowest text-primary font-bold border-l-4 border-primary transition-colors duration-150"
@@ -142,7 +145,7 @@ export default function Sidebar() {
                 >
                   {icon}
                 </span>
-                <span className="text-[0.8125rem] font-medium">{label}</span>
+                <span className="text-dato font-medium">{label}</span>
               </Link>
             ))}
 
@@ -156,6 +159,7 @@ export default function Sidebar() {
           <Link
             key={href}
             href={href}
+            aria-current={isActive(href) ? "page" : undefined}
             className={`flex flex-col items-center gap-1 ${
               isActive(href) ? "text-primary" : "text-slate-400"
             }`}
@@ -170,7 +174,7 @@ export default function Sidebar() {
             >
               {icon}
             </span>
-            <span className="text-[0.625rem] font-bold">{label}</span>
+            <span className="text-nano font-bold">{label}</span>
           </Link>
         ))}
       </nav>

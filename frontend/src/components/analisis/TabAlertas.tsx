@@ -48,14 +48,14 @@ function GrupoAlerta({ codigo, items, alta }: { codigo: string; items: AlertaRes
     <div className={`rounded-xl border overflow-hidden ${
       alta ? "border-red-500/25 bg-red-50/40 dark:bg-red-950/15" : "border-outline-variant/10 bg-surface-container-lowest"
     }`}>
-      <button onClick={() => setAbierto((v) => !v)} className="w-full text-left px-4 py-3 flex items-start gap-3">
+      <button onClick={() => setAbierto((v) => !v)} aria-expanded={abierto} className="w-full text-left px-4 py-3 flex items-start gap-3">
         <span className={`material-symbols-outlined text-[20px] mt-0.5 ${alta ? "text-red-500" : "text-secondary"}`}>
           {alta ? "warning" : "info"}
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-primary">{label}</span>
-            <span className={`px-2 py-0.5 rounded-full text-[0.625rem] font-bold tabular-nums ${
+            <span className={`px-2 py-0.5 rounded-full text-nano font-bold tabular-nums ${
               alta ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300" : "bg-surface-container-high text-on-surface-variant"
             }`}>{items.length} {items.length === 1 ? "caso" : "casos"}</span>
           </div>
@@ -67,7 +67,7 @@ function GrupoAlerta({ codigo, items, alta }: { codigo: string; items: AlertaRes
         <div className="border-t border-outline-variant/10 px-4 py-3 pl-12 flex flex-wrap gap-1.5">
           {items.map((a) => (
             <span key={a.id} title={a.fuente ?? undefined}
-              className="px-2 py-0.5 rounded-md bg-surface-container-high text-[0.625rem] font-medium text-on-surface-variant whitespace-nowrap">
+              className="px-2 py-0.5 rounded-md bg-surface-container-high text-nano font-medium text-on-surface-variant whitespace-nowrap">
               {prettyRef(a.referencia) || nm(a.mensaje)}
             </span>
           ))}
@@ -78,7 +78,7 @@ function GrupoAlerta({ codigo, items, alta }: { codigo: string; items: AlertaRes
             <li key={a.id} className="px-4 py-2.5 pl-12">
               <p className="text-xs text-on-surface leading-snug">{nm(a.mensaje)}</p>
               {(a.referencia || a.fuente) && (
-                <p className="text-[0.625rem] text-outline mt-0.5">
+                <p className="text-nano text-outline mt-0.5">
                   {prettyRef(a.referencia)}{a.fuente ? <> · <span className="font-medium">{a.fuente}</span></> : null}
                 </p>
               )}

@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
 import { ModalConfirmar } from "@/components/ModalConfirmar";
+import { Badge } from "@/components/Badge";
+import { SkeletonTabla } from "@/components/Skeleton";
 import { type Concurso, fmtFechaHora } from "@/lib/pivote/types";
 
 type ConcursoResumen = Concurso & { n_jobs: number; pendientes: number };
@@ -19,7 +21,7 @@ function MetricCard({ icon, label, value, accent }: {
         <span className={`material-symbols-outlined text-xl ${accent ? "text-amber-600" : "text-primary"}`}>{icon}</span>
       </div>
       <div>
-        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
+        <p className="text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
         <p className={`text-2xl font-bold ${accent ? "text-amber-600" : "text-primary"}`}>{value}</p>
       </div>
     </div>
@@ -100,7 +102,7 @@ export default function ConcursosPage() {
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <MetricCard icon="gavel" label="Concursos" value={cargando ? "…" : String(concursos.length)} />
         <MetricCard icon="lab_profile" label="Análisis (postores)" value={cargando ? "…" : String(totalAnalisis)} />
-        <MetricCard icon="pending_actions" label="Pendientes de revisión" value={cargando ? "…" : String(totalPendientes)} accent={totalPendientes > 0} />
+        <MetricCard icon="pending_actions" label="Por confirmar" value={cargando ? "…" : String(totalPendientes)} accent={totalPendientes > 0} />
       </section>
 
       {/* barra: buscador + nuevo */}
@@ -127,7 +129,7 @@ export default function ConcursosPage() {
       {creando && (
         <div className="mb-6 p-5 rounded-xl bg-surface-container-lowest shadow-ambient border border-outline-variant/10 flex flex-wrap gap-3 items-end animate-[fadeIn_.2s_ease]">
           <div className="flex-1 min-w-[260px]">
-            <label className="block text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">
+            <label className="block text-micro font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">
               Nomenclatura *
             </label>
             <input
@@ -150,18 +152,33 @@ export default function ConcursosPage() {
       {/* tabla de concursos */}
       <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
         {cargando ? (
-          <div className="px-5 py-10 text-center text-sm text-outline">Cargando…</div>
+          <SkeletonTabla filas={5} columnas={5} />
         ) : visibles.length === 0 ? (
-          <div className="px-5 py-10 text-center text-sm text-outline">
-            {filtro ? "Sin resultados para ese filtro." : "Sin concursos. Crea el primero."}
+          <div className="px-5 py-14 flex flex-col items-center text-center gap-3">
+            <span className="material-symbols-outlined text-5xl text-outline-variant" aria-hidden="true">
+              {filtro ? "search_off" : "gavel"}
+            </span>
+            {filtro ? (
+              <p className="text-sm text-outline">Sin resultados para «{filtro}».</p>
+            ) : (
+              <>
+                <p className="text-sm text-on-surface-variant">Aún no hay concursos registrados.</p>
+                <button
+                  onClick={() => setCreando(true)}
+                  className="inline-flex items-center gap-1.5 primary-gradient text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+                >
+                  <span className="material-symbols-outlined text-base">add</span> Crear el primero
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-surface-container-high">
                 <tr>
-                  {["Concurso", "Fecha", "Postores", "A revisión", ""].map((h, i) => (
-                    <th key={i} className="px-5 py-3 text-[0.6875rem] font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
+                  {["Concurso", "Fecha", "Postores", "Por confirmar", ""].map((h, i) => (
+                    <th key={i} scope="col" className="px-5 py-3 text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -202,16 +219,11 @@ export default function ConcursosPage() {
                     </td>
                     <td className="px-5 py-3.5 text-xs text-outline whitespace-nowrap">{fmtFechaHora(c.creado_en)}</td>
                     <td className="px-5 py-3.5">
-                      <span className="px-2.5 py-0.5 rounded bg-surface-container-high text-[0.6875rem] font-bold text-on-surface-variant">
-                        {c.n_jobs}
-                      </span>
+                      <Badge tono="info" chico>{c.n_jobs}</Badge>
                     </td>
                     <td className="px-5 py-3.5">
                       {c.pendientes > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 text-[0.6875rem] font-bold">
-                          <span className="material-symbols-outlined text-[13px]">pending_actions</span>
-                          {c.pendientes}
-                        </span>
+                        <Badge tono="revision" icono="pending_actions" chico>{c.pendientes}</Badge>
                       ) : (
                         <span className="text-xs text-outline">—</span>
                       )}
@@ -223,7 +235,7 @@ export default function ConcursosPage() {
                           Abrir expediente
                           <span className="material-symbols-outlined text-base">chevron_right</span>
                         </Link>
-                        <button onClick={() => setConcABorrar(c)} title="Borrar concurso"
+                        <button onClick={() => setConcABorrar(c)} title="Borrar concurso" aria-label="Borrar concurso"
                           className="text-outline hover:text-red-600 transition-colors">
                           <span className="material-symbols-outlined text-[18px]">delete</span>
                         </button>

@@ -80,7 +80,7 @@ export function TabDescargas({ job, pend, id, jobId }: {
             </p>
             <BarraProgreso valor={avance?.descargadas} total={avance?.total} />
             {avance && avance.faltan > 0 && (
-              <p className="text-[0.625rem] text-outline mt-1">
+              <p className="text-nano text-outline mt-1">
                 Faltan {avance.faltan} obra{avance.faltan > 1 ? "s" : ""} por descargar.
               </p>
             )}

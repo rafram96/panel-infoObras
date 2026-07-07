@@ -53,7 +53,7 @@ export default function DesignIndex() {
               ].join(" ")}
             >
               <p className="font-medium text-slate-800">{s.title}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+              <p className="text-micro text-slate-400 mt-0.5 line-clamp-1">
                 {s.description}
               </p>
             </button>

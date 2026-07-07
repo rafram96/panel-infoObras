@@ -114,6 +114,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Foco visible unificado para todo lo interactivo (accesibilidad por teclado).
+ * Solo aparece con navegación por teclado (:focus-visible), no al hacer clic. */
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+  }
+}
+
 .material-symbols-outlined {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   vertical-align: middle;

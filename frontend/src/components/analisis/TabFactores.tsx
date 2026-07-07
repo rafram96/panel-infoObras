@@ -4,6 +4,7 @@
  *  Una tarjeta por factor: puntaje grande + nombre real + detalle por cargo plegable. */
 import { useState } from "react";
 import type { FactorResumen } from "@/lib/pivote/types";
+import { TONO } from "@/lib/ui";
 import { nm } from "./helpers";
 
 function TarjetaFactor({ f }: { f: FactorResumen }) {
@@ -17,18 +18,14 @@ function TarjetaFactor({ f }: { f: FactorResumen }) {
   const lista = idx >= 0
     ? detalle.slice(idx).replace(/^Detalle por cargo:/i, "").split("||").map((s) => s.trim()).filter(Boolean)
     : [];
-  const badge = noAplica
-    ? "bg-surface-container-high text-on-surface-variant"
-    : pts && pts > 0
-      ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
-      : "bg-surface-container-high text-outline";
+  const badge = pts && pts > 0 ? TONO.ok.chip : TONO.info.chip;
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/10 shadow-ambient px-4 py-3 flex gap-4">
       <div className={`flex-shrink-0 w-16 rounded-lg flex flex-col items-center justify-center py-2 ${badge}`}>
         {noAplica ? (
-          <span className="text-[0.625rem] font-bold uppercase leading-tight text-center">No<br/>aplica</span>
+          <span className="text-nano font-bold uppercase leading-tight text-center">No<br/>aplica</span>
         ) : (
-          <><span className="text-2xl font-bold tabular-nums leading-none">{pts}</span><span className="text-[0.625rem] font-semibold uppercase">pts</span></>
+          <><span className="text-2xl font-bold tabular-nums leading-none">{pts}</span><span className="text-nano font-semibold uppercase">pts</span></>
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -40,14 +37,14 @@ function TarjetaFactor({ f }: { f: FactorResumen }) {
         <p className="text-xs text-on-surface-variant leading-relaxed mt-1">{headline}</p>
         {lista.length > 0 && (
           <>
-            <button onClick={() => setAbierto((x) => !x)} className="mt-2 text-[0.6875rem] text-secondary hover:text-primary inline-flex items-center gap-1">
+            <button onClick={() => setAbierto((x) => !x)} aria-expanded={abierto} className="mt-2 text-micro text-secondary hover:text-primary inline-flex items-center gap-1">
               <span className={`material-symbols-outlined text-[14px] transition-transform ${abierto ? "rotate-180" : ""}`}>expand_more</span>
               {abierto ? "ocultar" : "ver"} detalle por cargo ({lista.length})
             </button>
             {abierto && (
               <ul className="mt-1.5 space-y-1">
                 {lista.map((x, i) => (
-                  <li key={i} className="text-[0.6875rem] text-on-surface-variant leading-snug pl-3 border-l-2 border-outline-variant/20">{x}</li>
+                  <li key={i} className="text-micro text-on-surface-variant leading-snug pl-3 border-l-2 border-outline-variant/20">{x}</li>
                 ))}
               </ul>
             )}

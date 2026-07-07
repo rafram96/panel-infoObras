@@ -33,7 +33,7 @@ export function EtiquetaBases({ num, full }: { num: string; full: string | null 
   return (
     <span
       title={full ?? undefined}
-      className="text-[10px] font-semibold text-secondary bg-surface-container-high px-1.5 py-0.5 rounded whitespace-nowrap cursor-help"
+      className="text-nano font-semibold text-secondary bg-surface-container-high px-1.5 py-0.5 rounded whitespace-nowrap cursor-help"
     >
       bases {num}
     </span>

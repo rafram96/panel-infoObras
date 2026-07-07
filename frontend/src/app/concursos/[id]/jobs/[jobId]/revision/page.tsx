@@ -6,6 +6,7 @@
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PanelShell from "@/components/PanelShell";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import type { ItemRevision, PivoteJob } from "@/lib/pivote/types";
 import { TarjetaRevision } from "@/components/analisis/TarjetaRevision";
 import { fetchRetry } from "@/lib/pivote/fetchRetry";
@@ -48,7 +49,7 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
     setOcupado(false);
   };
 
-  if (!job) return <PanelShell title="Revisión"><p className="text-[0.8125rem] text-on-surface-variant">Cargando…</p></PanelShell>;
+  if (!job) return <PanelShell title="Revisión"><p className="text-dato text-on-surface-variant">Cargando…</p></PanelShell>;
 
   const pendientes = job.items_revision.filter((it) => !it.resuelto);
   const resueltos = job.items_revision.filter((it) => it.resuelto);
@@ -58,17 +59,22 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
   const pct = total > 0 ? Math.round((resueltos.length / total) * 100) : 0;
 
   return (
-    <PanelShell title="Cola de revisión" subtitle={`${job.postor ?? job.analisis_id} — lo que necesita tu decisión`}>
+    <PanelShell title="Casos por confirmar" subtitle={`${job.postor ?? job.analisis_id} — lo que necesita tu decisión`}>
       <div className="max-w-2xl">
-        <Link href={`/concursos/${id}/jobs/${jobId}`} className="text-[0.75rem] text-on-surface-variant hover:text-primary flex items-center gap-1 mb-5">
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver al análisis
-        </Link>
+        <Breadcrumbs
+          items={[
+            { label: "Concursos", href: "/concursos" },
+            { label: job.concurso ?? "Expediente", href: `/concursos/${id}` },
+            { label: job.postor ?? job.analisis_id, href: `/concursos/${id}/jobs/${jobId}` },
+            { label: "Por confirmar" },
+          ]}
+        />
 
         {/* progreso */}
         {total > 0 && (
           <div className="mb-5">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[0.8125rem] font-semibold text-primary">
+              <span className="text-dato font-semibold text-primary">
                 {resueltos.length} de {total} resueltas
               </span>
               <span className="text-xs text-on-surface-variant">{pendientes.length} pendiente{pendientes.length === 1 ? "" : "s"}</span>
@@ -80,7 +86,7 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
         )}
 
         {mensaje && (
-          <div className="mb-5 px-4 py-3 rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900/50 text-[0.8125rem] text-green-800 dark:text-green-300 shadow-ambient flex items-center gap-2">
+          <div className="mb-5 px-4 py-3 rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900/50 text-dato text-green-800 dark:text-green-300 shadow-ambient flex items-center gap-2">
             <span className="material-symbols-outlined text-base">check_circle</span><span>{mensaje}</span>
           </div>
         )}
@@ -89,7 +95,7 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
           <div className="bg-surface-container-lowest p-10 rounded-2xl shadow-ambient border border-outline-variant/10 text-center">
             <span className="material-symbols-outlined text-green-600 text-5xl">task_alt</span>
             <p className="mt-3 text-lg font-bold text-primary">¡Todo listo!</p>
-            <p className="text-[0.8125rem] text-on-surface-variant mt-1 max-w-sm mx-auto">
+            <p className="text-dato text-on-surface-variant mt-1 max-w-sm mx-auto">
               Resolviste los {total} caso{total === 1 ? "" : "s"}. El sistema volvió a verificar esas experiencias y el Excel final ya está actualizado.
             </p>
             <Link href={`/concursos/${id}/jobs/${jobId}`}
@@ -131,14 +137,14 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
             {/* cola: el resto de pendientes, clic para enfocar */}
             {pendientes.length > 1 && (
               <div className="mt-5">
-                <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-on-surface-variant mb-2">En cola</p>
+                <p className="text-micro font-bold uppercase tracking-wide text-on-surface-variant mb-2">En cola</p>
                 <div className="flex flex-wrap gap-2">
                   {pendientes.map((it, i) => (
                     <button
                       key={keyOf(it)}
                       disabled={ocupado}
                       onClick={() => setFocoKey(keyOf(it))}
-                      className={`px-2.5 py-1 rounded-lg text-[0.6875rem] font-semibold border transition-colors disabled:opacity-50 ${
+                      className={`px-2.5 py-1 rounded-lg text-micro font-semibold border transition-colors disabled:opacity-50 ${
                         it === foco
                           ? "border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300"
                           : "border-outline-variant/30 text-on-surface-variant hover:border-primary/40"
@@ -156,12 +162,12 @@ export default function RevisionPage({ params }: { params: Promise<{ id: string;
 
         {resueltos.length > 0 && (
           <div className="mt-8">
-            <p className="text-[0.6875rem] font-bold uppercase tracking-wide text-on-surface-variant mb-2">
+            <p className="text-micro font-bold uppercase tracking-wide text-on-surface-variant mb-2">
               Resueltas en esta corrida ({resueltos.length})
             </p>
             <ul className="space-y-1">
               {resueltos.map((it) => (
-                <li key={keyOf(it)} className="text-[0.75rem] text-on-surface-variant flex items-center gap-2">
+                <li key={keyOf(it)} className="text-xs text-on-surface-variant flex items-center gap-2">
                   <span className="material-symbols-outlined text-green-600 text-[16px]">check_circle</span>
                   Prof {it.n_prof} · exp {it.n_exp} — {it.accion_sugerida}
                 </li>

@@ -6,6 +6,8 @@
  *  razonamiento de Claude plegable. Ordena primero los que necesitan atención. */
 import { useState } from "react";
 import type { ResumenAnalisis, VeredictoProfesional } from "@/lib/pivote/types";
+import { Badge } from "@/components/Badge";
+import { TONO, type Tono } from "@/lib/ui";
 import { nm } from "./helpers";
 import { EtiquetaBases, refCargo } from "./cargo";
 
@@ -32,11 +34,11 @@ export function veredictoFinal(v: VeredictoProfesional): "cumple" | "no_cumple" 
   return "pendiente";
 }
 
-const VEREDICTO_UI = {
-  cumple: { label: "Cumple", icon: "check_circle", chip: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300", borde: "border-l-green-500" },
-  no_cumple: { label: "No cumple", icon: "cancel", chip: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300", borde: "border-l-red-500" },
-  pendiente: { label: "Pendiente", icon: "schedule", chip: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300", borde: "border-l-amber-500" },
-} as const;
+const VEREDICTO_UI: Record<"cumple" | "no_cumple" | "pendiente", { label: string; icon: string; tono: Tono }> = {
+  cumple: { label: "Cumple", icon: "check_circle", tono: "ok" },
+  no_cumple: { label: "No cumple", icon: "cancel", tono: "error" },
+  pendiente: { label: "Pendiente", icon: "schedule", tono: "revision" },
+};
 
 function TarjetaVeredicto({ v }: { v: VeredictoProfesional }) {
   const [abierto, setAbierto] = useState(false);
@@ -49,7 +51,7 @@ function TarjetaVeredicto({ v }: { v: VeredictoProfesional }) {
   const bajoMinimo = ef != null && min != null && ef < min - 0.001;
   const c = refCargo(v.cargo, v.cargo_bases_num, v.cargo_bases_nombre);
   return (
-    <div className={`bg-surface-container-lowest rounded-xl border border-outline-variant/10 border-l-4 ${u.borde} shadow-ambient px-4 py-3`}>
+    <div className={`bg-surface-container-lowest rounded-xl border border-outline-variant/10 border-l-4 ${TONO[u.tono].borde} shadow-ambient px-4 py-3`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -58,9 +60,7 @@ function TarjetaVeredicto({ v }: { v: VeredictoProfesional }) {
           </div>
           <p className="text-xs text-outline mt-0.5">{v.nombre}</p>
         </div>
-        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap ${u.chip}`}>
-          <span className="material-symbols-outlined text-[15px]">{u.icon}</span>{u.label}
-        </span>
+        <Badge tono={u.tono} icono={u.icon}>{u.label}</Badge>
       </div>
 
       {(ef != null || min != null) && (
@@ -81,13 +81,13 @@ function TarjetaVeredicto({ v }: { v: VeredictoProfesional }) {
       )}
 
       {bajoMinimo && estado === "cumple" && (
-        <p className="mt-1.5 text-[0.6875rem] text-amber-700 dark:text-amber-300 flex items-start gap-1 leading-snug">
+        <p className="mt-1.5 text-micro text-amber-700 dark:text-amber-300 flex items-start gap-1 leading-snug">
           <span className="material-symbols-outlined text-[14px] mt-px">warning</span>
           Con días efectivos quedaría por debajo del mínimo; el sistema lo dejó como cumple de forma provisional — conviene revisarlo.
         </p>
       )}
 
-      <button onClick={() => setAbierto((x) => !x)} className="mt-2 text-[0.6875rem] text-secondary hover:text-primary inline-flex items-center gap-1">
+      <button onClick={() => setAbierto((x) => !x)} aria-expanded={abierto} className="mt-2 text-micro text-secondary hover:text-primary inline-flex items-center gap-1">
         <span className={`material-symbols-outlined text-[14px] transition-transform ${abierto ? "rotate-180" : ""}`}>expand_more</span>
         {abierto ? "ocultar" : "ver"} cómo lo razonó Claude
       </button>
@@ -118,8 +118,8 @@ export function TabVeredictos({ resumen }: { resumen: ResumenAnalisis }) {
           ¿Cada profesional alcanza la experiencia mínima?
         </h2>
         <div className="flex items-center gap-2 text-xs">
-          <span className="px-2.5 py-1 rounded-lg bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 font-bold">{nC} cumplen</span>
-          {nN > 0 && <span className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 font-bold">{nN} no</span>}
+          <Badge tono="ok">{nC} cumplen</Badge>
+          {nN > 0 && <Badge tono="error">{nN} no</Badge>}
           {resumen.puntaje_total != null && <span className="text-outline">· puntaje <b className="text-primary text-sm">{resumen.puntaje_total}</b></span>}
         </div>
       </div>
