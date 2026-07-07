@@ -100,7 +100,7 @@ function FilaExperiencia({ e }: { e: ExpBreve }) {
           <div className="flex flex-wrap gap-1">
             {(e.incluye_covid ?? "").startsWith("S") && <span className="px-1.5 py-0.5 rounded text-nano font-bold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">COVID</span>}
             {(e.traslape ?? "").startsWith("S") && <span className="px-1.5 py-0.5 rounded text-nano font-bold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">TRASLAPE</span>}
-            {e.folio && <span className="px-1.5 py-0.5 rounded text-nano font-bold bg-surface-container-high text-slate-500">f.{e.folio}</span>}
+            {e.folio && <span className="px-1.5 py-0.5 rounded text-nano font-bold bg-surface-container-high text-on-surface-variant">f.{e.folio}</span>}
           </div>
         </td>
       </tr>
@@ -110,7 +110,7 @@ function FilaExperiencia({ e }: { e: ExpBreve }) {
             <div className="grid sm:grid-cols-2 gap-3 text-xs" style={{ animation: "fadeIn 0.2s ease-out" }}>
               {/* Emisor del certificado — lo que el backend verifica contra SUNAT */}
               <div className="bg-surface-container-lowest rounded-lg p-3 border border-outline-variant/10">
-                <p className="text-nano font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1">
+                <p className="text-nano font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">badge</span>Emisor del certificado · SUNAT
                 </p>
                 <p className="text-on-surface font-medium">{e.entidad_emisora || "—"}</p>
@@ -129,25 +129,25 @@ function FilaExperiencia({ e }: { e: ExpBreve }) {
               </div>
               {/* Representante de obra — quién la ejecutó/supervisó según InfoObras */}
               <div className="bg-surface-container-lowest rounded-lg p-3 border border-outline-variant/10">
-                <p className="text-nano font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1">
+                <p className="text-nano font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">engineering</span>Representante de obra · InfoObras
                 </p>
-                {!tieneRep && <p className="text-slate-400">Sin datos de representante para esta obra.</p>}
+                {!tieneRep && <p className="text-outline">Sin datos de representante para esta obra.</p>}
                 {contr.map((c, i) => (
                   <div key={`c${i}`} className="mb-1.5">
-                    <span className="text-nano font-bold uppercase text-slate-400">Contratista (ejecutor)</span>
+                    <span className="text-nano font-bold uppercase text-outline">Contratista (ejecutor)</span>
                     <p className="text-on-surface">{c.nombre_empresa}{c.ruc && <span className="font-mono text-secondary"> · RUC {c.ruc}</span>}{c.monto_soles ? <span className="text-secondary"> · S/ {c.monto_soles.toLocaleString("es-PE")}</span> : null}</p>
                   </div>
                 ))}
                 {supes.map((s, i) => (
                   <div key={`s${i}`} className="mb-1.5">
-                    <span className="text-nano font-bold uppercase text-slate-400">{s.tipo || "Supervisor"}</span>
+                    <span className="text-nano font-bold uppercase text-outline">{s.tipo || "Supervisor"}</span>
                     <p className="text-on-surface">{s.empresa || nombrePersona(s) || "—"}{s.ruc && <span className="font-mono text-secondary"> · RUC {s.ruc}</span>}</p>
                   </div>
                 ))}
                 {resis.length > 0 && (
                   <div>
-                    <span className="text-nano font-bold uppercase text-slate-400">Residente(s)</span>
+                    <span className="text-nano font-bold uppercase text-outline">Residente(s)</span>
                     <p className="text-on-surface">{resis.map(nombrePersona).filter(Boolean).join(" · ") || "—"}</p>
                   </div>
                 )}
@@ -224,7 +224,7 @@ function FilaProfesional({ prof }: { prof: ProfBreve }) {
               style={{ animation: "fadeIn 0.2s ease-out" }}>
               {/* Datos del profesional */}
               <div>
-                <p className="text-nano font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1">
+                <p className="text-nano font-bold uppercase tracking-widest text-on-surface-variant mb-2 flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">person</span>
                   Datos del profesional
                 </p>
@@ -237,9 +237,9 @@ function FilaProfesional({ prof }: { prof: ProfBreve }) {
                     { label: "Veredicto", value: prof.cumple ?? "pendiente de revisión" },
                   ].map(({ label, value }) => (
                     <div key={label}>
-                      <p className="text-nano font-bold uppercase tracking-wider text-slate-400">{label}</p>
+                      <p className="text-nano font-bold uppercase tracking-wider text-outline">{label}</p>
                       <p className="text-on-surface font-medium">
-                        {value || <span className="text-slate-300">—</span>}
+                        {value || <span className="text-outline-variant">—</span>}
                       </p>
                     </div>
                   ))}
@@ -261,14 +261,14 @@ function FilaProfesional({ prof }: { prof: ProfBreve }) {
 
               {/* Experiencias */}
               <div>
-                <p className="text-nano font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1">
+                <p className="text-nano font-bold uppercase tracking-widest text-on-surface-variant mb-2 flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">description</span>
                   Experiencias ({prof.experiencias.length})
                 </p>
                 <div className="bg-surface-container-lowest rounded-lg overflow-hidden border border-outline-variant/10">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-surface-container-high">
-                      <tr className="text-nano font-bold uppercase tracking-wider text-slate-500">
+                      <tr className="text-nano font-bold uppercase tracking-wider text-on-surface-variant">
                         <th scope="col" className="px-3 py-1.5">#</th>
                         <th scope="col" className="px-3 py-1.5">Proyecto u obra</th>
                         <th scope="col" className="px-3 py-1.5">Emisor</th>
@@ -309,7 +309,7 @@ export function TabProfesionales({ profesionales }: { profesionales: ProfBreve[]
           <thead className="bg-surface-container-high">
             <tr>
               {["#", "Cargo", "Profesional", "Colegiatura", "Exps", "Años", "Veredicto", ""].map((h, i) => (
-                <th key={i} className="px-3 py-3 text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
+                <th key={i} className="px-3 py-3 text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant">{h}</th>
               ))}
             </tr>
           </thead>

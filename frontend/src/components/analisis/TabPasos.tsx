@@ -104,7 +104,7 @@ function FilaEtapa({ res, nombre, abierta, onToggle }: {
               ["Duración", fmtMs(res.metrica.duracion_ms)],
             ].map(([k, v]) => (
               <div key={k}>
-                <p className="text-nano font-bold uppercase tracking-wide text-slate-500">{k}</p>
+                <p className="text-nano font-bold uppercase tracking-wide text-on-surface-variant">{k}</p>
                 <p className="text-sm font-bold text-primary">{v}</p>
               </div>
             ))}
@@ -118,7 +118,7 @@ function FilaEtapa({ res, nombre, abierta, onToggle }: {
 
           {res.observaciones.length > 0 && (
             <div className="mt-3 space-y-2">
-              <p className="text-nano font-bold uppercase tracking-wide text-slate-500">
+              <p className="text-nano font-bold uppercase tracking-wide text-on-surface-variant">
                 Observaciones de este paso
               </p>
               {res.observaciones.map((o: Observacion, i) => {

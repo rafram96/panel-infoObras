@@ -24,7 +24,7 @@ function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
         <span className={`material-symbols-outlined text-xl ${color}`}>{icon}</span>
       </div>
       <div>
-        <p className="text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
+        <p className="text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant">{label}</p>
         <p className={`text-2xl font-bold ${color}`}>{value}</p>
       </div>
     </div>
@@ -146,7 +146,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
       {editando && (
         <div className="mb-6 p-5 rounded-xl bg-surface-container-lowest shadow-ambient border border-outline-variant/10 flex flex-wrap gap-3 items-end animate-[fadeIn_.2s_ease]">
           <div className="flex-1 min-w-[260px]">
-            <label className="block text-micro font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">Nomenclatura *</label>
+            <label className="block text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant mb-1.5">Nomenclatura *</label>
             <input value={editNom} onChange={(e) => setEditNom(e.target.value)}
               className="w-full h-10 px-3 rounded-lg bg-surface border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50" />
           </div>
@@ -207,7 +207,7 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
               <thead className="bg-surface-container-high">
                 <tr>
                   {["Postor", "Fecha", "Origen", "Estado", "Puntaje", "Pasos", "Alertas", "Por confirmar", "Acciones"].map((h) => (
-                    <th key={h} scope="col" className="px-5 py-3 text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
+                    <th key={h} scope="col" className="px-5 py-3 text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant">{h}</th>
                   ))}
                 </tr>
               </thead>

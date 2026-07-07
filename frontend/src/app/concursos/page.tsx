@@ -21,7 +21,7 @@ function MetricCard({ icon, label, value, accent }: {
         <span className={`material-symbols-outlined text-xl ${accent ? "text-amber-600" : "text-primary"}`}>{icon}</span>
       </div>
       <div>
-        <p className="text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
+        <p className="text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant">{label}</p>
         <p className={`text-2xl font-bold ${accent ? "text-amber-600" : "text-primary"}`}>{value}</p>
       </div>
     </div>
@@ -129,7 +129,7 @@ export default function ConcursosPage() {
       {creando && (
         <div className="mb-6 p-5 rounded-xl bg-surface-container-lowest shadow-ambient border border-outline-variant/10 flex flex-wrap gap-3 items-end animate-[fadeIn_.2s_ease]">
           <div className="flex-1 min-w-[260px]">
-            <label className="block text-micro font-bold uppercase tracking-[0.05rem] text-slate-500 mb-1.5">
+            <label className="block text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant mb-1.5">
               Nomenclatura *
             </label>
             <input
@@ -178,7 +178,7 @@ export default function ConcursosPage() {
               <thead className="bg-surface-container-high">
                 <tr>
                   {["Concurso", "Fecha", "Postores", "Por confirmar", ""].map((h, i) => (
-                    <th key={i} scope="col" className="px-5 py-3 text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{h}</th>
+                    <th key={i} scope="col" className="px-5 py-3 text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant">{h}</th>
                   ))}
                 </tr>
               </thead>

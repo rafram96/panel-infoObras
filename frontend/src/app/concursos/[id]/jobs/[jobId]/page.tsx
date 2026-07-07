@@ -33,7 +33,7 @@ function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
         <span className={`material-symbols-outlined text-xl ${color}`}>{icon}</span>
       </div>
       <div>
-        <p className="text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">{label}</p>
+        <p className="text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant">{label}</p>
         <p className={`text-2xl font-bold ${color}`}>{value}</p>
       </div>
     </div>
@@ -41,6 +41,7 @@ function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
 }
 
 type TabId = "pasos" | "profesionales" | "veredictos" | "factores" | "alertas" | "descargas";
+const TABS: TabId[] = ["pasos", "profesionales", "veredictos", "factores", "alertas", "descargas"];
 
 // ── página ────────────────────────────────────────────────────────────────────
 export default function JobPivote({ params }: { params: Promise<{ id: string; jobId: string }> }) {
@@ -53,8 +54,26 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<TabId>("pasos");
   const tabTocado = useRef(false);
-  const irTab = (t: TabId) => { tabTocado.current = true; setTab(t); };
+  // Refleja la pestaña en la URL sin disparar navegación de Next (no re-fetch).
+  const reflejarTabEnUrl = (t: TabId) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", t);
+    window.history.replaceState(null, "", url);
+  };
+  const irTab = (t: TabId) => { tabTocado.current = true; setTab(t); reflejarTabEnUrl(t); };
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Pestaña inicial desde el enlace (?tab=alertas): sobrevive al F5 y es
+  // compartible. Si vino explícita, cuenta como elección (no la pisa el salto
+  // automático a Resultados). Se lee de la URL del navegador (sin useSearchParams
+  // para no requerir <Suspense> en el build).
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("tab");
+    if (p && TABS.includes(p as TabId)) {
+      tabTocado.current = true;
+      setTab(p as TabId);
+    }
+  }, []);
 
   const cargar = useCallback(async () => {
     const r = await fetchRetry(`/api/pivote/jobs/${jobId}`);
@@ -90,7 +109,12 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
   // Al terminar, mostrar los Resultados (lo que el evaluador viene a ver), salvo
   // que ya haya cambiado de pestaña a mano mientras corría la verificación.
   useEffect(() => {
-    if (resumen && !tabTocado.current) setTab("veredictos");
+    if (resumen && !tabTocado.current) {
+      setTab("veredictos");
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", "veredictos");
+      window.history.replaceState(null, "", url);
+    }
   }, [resumen]);
 
   if (error) return (

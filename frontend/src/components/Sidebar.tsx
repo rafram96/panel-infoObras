@@ -51,7 +51,7 @@ export default function Sidebar() {
             <span className="text-sm font-black uppercase tracking-[0.1rem] text-primary">
               InfoObras
             </span>
-            <p className="text-micro font-bold uppercase tracking-[0.05rem] text-slate-500">
+            <p className="text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant">
               Evaluación de propuestas
             </p>
           </div>
@@ -86,7 +86,7 @@ export default function Sidebar() {
             {/* Herramientas section — solo si hay items (hoy oculta) */}
             {NAV_TOOLS.length > 0 && (
             <div className="pt-4 pb-1">
-              <span className="px-3 text-nano font-bold uppercase tracking-[0.15rem] text-slate-400">
+              <span className="px-3 text-nano font-bold uppercase tracking-[0.15rem] text-outline">
                 Herramientas
               </span>
             </div>
@@ -119,7 +119,7 @@ export default function Sidebar() {
             {/* Información section — solo si hay items (hoy oculta) */}
             {NAV_INFO.length > 0 && (
             <div className="pt-4 pb-1">
-              <span className="px-3 text-nano font-bold uppercase tracking-[0.15rem] text-slate-400">
+              <span className="px-3 text-nano font-bold uppercase tracking-[0.15rem] text-outline">
                 Información
               </span>
             </div>
@@ -161,7 +161,7 @@ export default function Sidebar() {
             href={href}
             aria-current={isActive(href) ? "page" : undefined}
             className={`flex flex-col items-center gap-1 ${
-              isActive(href) ? "text-primary" : "text-slate-400"
+              isActive(href) ? "text-primary" : "text-outline"
             }`}
           >
             <span
