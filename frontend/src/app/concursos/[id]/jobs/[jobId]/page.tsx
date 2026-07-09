@@ -11,9 +11,10 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Badge } from "@/components/Badge";
 import { Skeleton, SkeletonMetricas } from "@/components/Skeleton";
 import {
-  type PivoteJob, type ResumenAnalisis, type SaludPortal,
+  type PivoteJob, type ProgresoAnalisis, type ResumenAnalisis, type SaludPortal,
   ETAPA_LABEL, ETAPAS_ORDEN, JOB_ESTADO_UI, pendientesHumano,
 } from "@/lib/pivote/types";
+import { StepperEtapas } from "@/components/analisis/StepperEtapas";
 import { TabPasos } from "@/components/analisis/TabPasos";
 import { TabProfesionales, type ProfBreve } from "@/components/analisis/TabProfesionales";
 import { TabVeredictos } from "@/components/analisis/TabVeredictos";
@@ -47,6 +48,7 @@ const TABS: TabId[] = ["pasos", "profesionales", "veredictos", "factores", "aler
 export default function JobPivote({ params }: { params: Promise<{ id: string; jobId: string }> }) {
   const { id, jobId } = use(params);
   const [job, setJob] = useState<PivoteJob | null>(null);
+  const [progreso, setProgreso] = useState<ProgresoAnalisis | null>(null);
   const [resumen, setResumen] = useState<ResumenAnalisis | null>(null);
   const [profesionales, setProfesionales] = useState<ProfBreve[] | null>(null);
   const [salud, setSalud] = useState<SaludPortal[]>([]);
@@ -81,6 +83,13 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
     setError(null);
     const j: PivoteJob = await r.json();
     setJob(j);
+    // Progreso fino (stepper por-ítem) SOLO mientras el pipeline corre.
+    if (j.estado === "en_proceso" || j.estado === "recibido") {
+      const rp = await fetch(`/api/pivote/jobs/${jobId}/progreso`);
+      if (rp.ok) setProgreso(await rp.json());
+    } else {
+      setProgreso(null);
+    }
     if (j.estado === "completado" || j.estado === "requiere_revision") {
       const [rr, re] = await Promise.all([
         fetch(`/api/pivote/jobs/${jobId}/resumen`),
@@ -285,8 +294,11 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
         </div>
       )}
 
-      {/* barra de progreso con shimmer mientras corre */}
-      {activo && (
+      {/* verificación en vivo · stepper con avance por ítem (el /progreso lo
+          nutre); mientras no llega la primera respuesta, barra simple de respaldo */}
+      {activo && (progreso ? (
+        <StepperEtapas progreso={progreso} />
+      ) : (
         <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 p-5 mb-6">
           <div className="relative h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
             <div className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
@@ -301,7 +313,7 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
             <span className="text-sm font-bold text-primary">{pct}%</span>
           </div>
         </div>
-      )}
+      ))}
 
       {/* ── PESTAÑAS (subvistas) ── */}
       <nav className="flex flex-wrap gap-1 mb-6 border-b border-outline-variant/10">

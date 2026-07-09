@@ -172,6 +172,48 @@ export interface SaludPortal {
   desde?: string | null;
 }
 
+// ── Progreso del análisis (barra en vivo) ────────────────────────────────────
+// Espejo de `armar_progreso()` en Pivote/backend/api/app.py. Fusiona el avance
+// grueso (checkpoints por etapa) con el fino (item por item, en memoria).
+
+/** Una etapa en el stepper. `item_actual/items_total` solo vienen mientras está
+ *  `en_curso` y la etapa itera por ítem (obras, emisores). */
+export interface EtapaProgreso {
+  etapa: Etapa;
+  texto: string;                   // texto en vivo SIN jerga (lo emite el backend)
+  estado: EstadoEtapa;             // incluye "en_curso" para la(s) etapa(s) activa(s)
+  item_actual?: number;
+  items_total?: number;
+}
+
+/** Avance de la descarga diferida de documentos (lo que arma el ZIP). */
+export interface DescargasProgreso {
+  estado?: PivoteJob["descargas_estado"];
+  listo: boolean;
+  total: number;
+  descargadas: number;
+  faltan: number;
+  en_revision: number;
+  obra_actual?: string | null;     // frase de la obra que se está bajando ahora
+}
+
+/** Estimación de tiempo restante (§4 — futuro; hoy el backend manda `null`). */
+export interface EtaProgreso {
+  segundos_restantes: number;
+  rango: [number, number];
+  confiable: boolean;
+}
+
+export interface ProgresoAnalisis {
+  job_id: string;
+  estado: JobEstado;
+  pct: number;                     // 0-100, grueso por etapas
+  etapas: EtapaProgreso[];         // en orden canónico (8)
+  descargas: DescargasProgreso;
+  eta?: EtaProgreso | null;
+  pendientes_humano: number;
+}
+
 // ── helpers de presentación ──────────────────────────────────────────────────
 
 export const JOB_ESTADO_UI: Record<JobEstado, { label: string; cls: string }> = {

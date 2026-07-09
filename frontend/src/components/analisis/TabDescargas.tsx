@@ -10,7 +10,7 @@ import { BarraProgreso } from "@/components/BarraProgreso";
 export function TabDescargas({ job, pend, id, jobId }: {
   job: PivoteJob; pend: number; id: string; jobId: string;
 }) {
-  const [avance, setAvance] = useState<{ descargadas: number; total: number; faltan: number; listo: boolean } | null>(null);
+  const [avance, setAvance] = useState<{ descargadas: number; total: number; faltan: number; listo: boolean; obra_actual?: string | null } | null>(null);
   const preparando = job.descargas_estado === "pendiente" || job.descargas_estado === "en_progreso";
   // Mientras el ZIP se prepara, sondea el avance REAL por obra (no por etapas).
   useEffect(() => {
@@ -70,13 +70,13 @@ export function TabDescargas({ job, pend, id, jobId }: {
           </span>
         ) : (
           <div className="mt-auto">
-            <p className="text-xs font-medium text-amber-600 mb-1.5 inline-flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
-              {avance && avance.total > 0
+            <p className="text-xs font-medium text-amber-600 mb-1.5 flex items-start gap-1.5">
+              <span className="material-symbols-outlined text-base animate-spin flex-shrink-0">progress_activity</span>
+              <span>{avance && avance.total > 0
                 ? (avance.descargadas >= avance.total
                     ? "Comprimiendo el ZIP…"
-                    : `Descargando documentos… ${avance.descargadas}/${avance.total} obras`)
-                : "Preparando ZIP…"}
+                    : (avance.obra_actual ?? `Descargando documentos… ${avance.descargadas}/${avance.total} obras`))
+                : "Preparando ZIP…"}</span>
             </p>
             <BarraProgreso valor={avance?.descargadas} total={avance?.total} />
             {avance && avance.faltan > 0 && (

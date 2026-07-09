@@ -11,9 +11,9 @@
  */
 import type {
   Concurso, EstadoEtapa, Etapa, ItemRevision, MetricaEtapa, Observacion,
-  PivoteJob, ResultadoEtapa, ResumenAnalisis, SaludPortal,
+  PivoteJob, ProgresoAnalisis, ResultadoEtapa, ResumenAnalisis, SaludPortal,
 } from "../types";
-import { ETAPAS_ORDEN } from "../types";
+import { ETAPA_LABEL, ETAPAS_ORDEN } from "../types";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -416,7 +416,65 @@ export const db = {
   salud(): SaludPortal[] {
     return salud;
   },
+
+  /** Progreso sintético para la barra en vivo del panel (sin backend real).
+   *  Reusa la simulación de `job()`: la etapa `en_curso` gana un contador
+   *  por-ítem y un texto sin jerga, igual que `armar_progreso()` del backend. */
+  progreso(jobId: string): ProgresoAnalisis | null {
+    const j = jobs.get(jobId);
+    if (!j) return null;
+    // NO avanza la simulación: `job()` es el único que la mueve. Así /progreso
+    // refleja el estado que dejó el último /jobs y no acelera la demo al doble.
+    const OK = ["ok", "ok_con_revision", "error_parcial"];
+    const completas = j.etapas.filter((e) => OK.includes(e.estado)).length;
+    const porEtapa = new Map(j.etapas.map((e) => [e.etapa, e]));
+    const etapas = ETAPAS_ORDEN.map((nombre) => {
+      const res = porEtapa.get(nombre);
+      if (res && res.estado === "en_curso") {
+        // solo las etapas que iteran por ítem llevan contador (igual que el backend:
+        // validacion/reglas/excel reportan sin número).
+        const porItem = ["resolucion_cui", "infoobras", "sunat"].includes(nombre);
+        const total = porItem ? res.metrica.items_total || 0 : 0;
+        const actual = total ? Math.max(1, res.metrica.items_ok || Math.ceil(total / 2)) : 0;
+        return {
+          etapa: nombre, estado: "en_curso" as EstadoEtapa,
+          texto: textoVivoMock(nombre, actual, total),
+          ...(total ? { item_actual: actual, items_total: total } : {}),
+        };
+      }
+      return { etapa: nombre, texto: ETAPA_LABEL[nombre],
+               estado: (res?.estado ?? "pendiente") as EstadoEtapa };
+    });
+    const dEstado = j.descargas_estado ?? "listas";
+    return {
+      job_id: j.job_id,
+      estado: j.estado,
+      pct: Math.round((completas / ETAPAS_ORDEN.length) * 100),
+      etapas,
+      descargas: {
+        estado: dEstado, listo: dEstado === "listas",
+        total: 0, descargadas: 0, faltan: 0,
+        en_revision: j.items_revision.filter((it) => !it.resuelto).length,
+        obra_actual: null,
+      },
+      eta: null,
+      pendientes_humano: j.items_revision.filter((it) => !it.resuelto).length,
+    };
+  },
 };
+
+/** Textos sin jerga de la etapa activa (espejo de los que emite el backend). */
+function textoVivoMock(etapa: Etapa, i: number, total: number): string {
+  switch (etapa) {
+    case "resolucion_cui": return `Ubicando la obra ${i} de ${total} en el registro público`;
+    case "infoobras": return `Verificando la obra ${i} de ${total} — Hospital de demostración`;
+    case "sunat": return `Consultando el emisor ${i} de ${total}`;
+    case "validacion": return "Revisando la consistencia de la propuesta";
+    case "reglas": return "Calculando los días efectivos de experiencia";
+    case "excel": return "Armando el Excel de evaluación";
+    default: return ETAPA_LABEL[etapa];
+  }
+}
 
 /** El job EN_PROCESO avanza una etapa por consulta (suficiente para ver el
  *  stepper vivo con el polling de P3). */
