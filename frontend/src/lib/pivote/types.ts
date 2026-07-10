@@ -172,6 +172,24 @@ export interface SaludPortal {
   desde?: string | null;
 }
 
+// ── Búsqueda global de profesionales ─────────────────────────────────────────
+// Espejo de GET /api/pivote/profesionales (backend `buscar_profesionales`).
+// Una fila por aparición: el mismo profesional en 2 propuestas = 2 filas.
+
+export interface ProfesionalHit {
+  nombre: string | null;
+  cargo: string | null;
+  colegiatura: string | null;
+  n_prof: number;
+  cumple?: string | null;          // veredicto de Claude ("SÍ — 4.51 años")
+  n_experiencias: number;
+  job_id: string;
+  estado_job: JobEstado;
+  concurso_id: string | null;
+  concurso: string | null;
+  postor: string | null;
+}
+
 // ── Progreso del análisis (barra en vivo) ────────────────────────────────────
 // Espejo de `armar_progreso()` en Pivote/backend/api/app.py. Fusiona el avance
 // grueso (checkpoints por etapa) con el fino (item por item, en memoria).

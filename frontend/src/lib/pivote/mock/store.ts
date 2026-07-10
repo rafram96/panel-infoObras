@@ -11,11 +11,17 @@
  */
 import type {
   Concurso, EstadoEtapa, Etapa, ItemRevision, MetricaEtapa, Observacion,
-  PivoteJob, ProgresoAnalisis, ResultadoEtapa, ResumenAnalisis, SaludPortal,
+  PivoteJob, ProfesionalHit, ProgresoAnalisis, ResultadoEtapa, ResumenAnalisis,
+  SaludPortal,
 } from "../types";
 import { ETAPA_LABEL, ETAPAS_ORDEN } from "../types";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+/** Minúsculas y sin tildes, para búsquedas tolerantes ("perez" ≈ "Pérez"). */
+function sinTildes(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
 
 function met(total: number, ok: number, revision = 0, error = 0, ms = 1200): MetricaEtapa {
   return { items_total: total, items_ok: ok, items_revision: revision, items_error: error, reintentos: 0, duracion_ms: ms };
@@ -415,6 +421,34 @@ export const db = {
 
   salud(): SaludPortal[] {
     return salud;
+  },
+
+  /** Búsqueda global de profesionales (espejo del endpoint del backend):
+   *  matchea nombre/colegiatura/cargo sin tildes ni mayúsculas, una fila por
+   *  aparición, con el contexto para saltar directo al análisis. */
+  buscarProfesionales(q: string): ProfesionalHit[] {
+    const qn = sinTildes(q.trim());
+    if (qn.length < 2) return [];
+    const out: ProfesionalHit[] = [];
+    for (const [jobId, profs] of espejos) {
+      const j = jobs.get(jobId);
+      if (!j) continue;
+      for (const p of profs) {
+        const campos = [p.nombre, p.colegiatura, p.cargo];
+        if (!campos.some((v) => v && sinTildes(v).includes(qn))) continue;
+        out.push({
+          nombre: p.nombre, cargo: p.cargo, colegiatura: p.colegiatura ?? null,
+          n_prof: p.n_prof, cumple: p.cumple ?? null,
+          n_experiencias: p.experiencias.length,
+          job_id: jobId, estado_job: j.estado,
+          concurso_id: j.concurso_id ?? null, concurso: j.concurso ?? null,
+          postor: j.postor ?? null,
+        });
+      }
+    }
+    return out
+      .sort((a, b) => sinTildes(a.nombre ?? "").localeCompare(sinTildes(b.nombre ?? "")))
+      .slice(0, 50);
   },
 
   /** Progreso sintético para la barra en vivo del panel (sin backend real).

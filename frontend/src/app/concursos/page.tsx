@@ -8,7 +8,7 @@ import PanelShell from "@/components/PanelShell";
 import { ModalConfirmar } from "@/components/ModalConfirmar";
 import { Badge } from "@/components/Badge";
 import { SkeletonTabla } from "@/components/Skeleton";
-import { type Concurso, fmtFechaHora } from "@/lib/pivote/types";
+import { type Concurso, type ProfesionalHit, JOB_ESTADO_UI, fmtFechaHora } from "@/lib/pivote/types";
 
 type ConcursoResumen = Concurso & { n_jobs: number; pendientes: number };
 
@@ -32,6 +32,7 @@ export default function ConcursosPage() {
   const [concursos, setConcursos] = useState<ConcursoResumen[]>([]);
   const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState("");
+  const [profHits, setProfHits] = useState<ProfesionalHit[]>([]);
   const [creando, setCreando] = useState(false);
   const [nomenclatura, setNomenclatura] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
@@ -73,6 +74,21 @@ export default function ConcursosPage() {
     return () => clearInterval(t);
   }, [cargar]);
 
+  // El mismo buscador también encuentra PROFESIONALES en todos los análisis
+  // (nombre, colegiatura o cargo, sin tildes). Debounce corto para no martillar.
+  useEffect(() => {
+    const q = filtro.trim();
+    if (q.length < 2) { setProfHits([]); return; }
+    let cancel = false;
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/pivote/profesionales?q=${encodeURIComponent(q)}`);
+        if (r.ok && !cancel) setProfHits(await r.json());
+      } catch { /* silencioso: la búsqueda de concursos sigue funcionando */ }
+    }, 300);
+    return () => { cancel = true; clearTimeout(t); };
+  }, [filtro]);
+
   const crear = async () => {
     if (!nomenclatura.trim()) return;
     const r = await fetch("/api/pivote/concursos", {
@@ -112,7 +128,7 @@ export default function ConcursosPage() {
           <input
             value={filtro}
             onChange={(e) => setFiltro(e.target.value)}
-            placeholder="Buscar por nomenclatura…"
+            placeholder="Buscar concurso o profesional (nombre, CIP, cargo)…"
             className="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-lowest border border-outline-variant/20 text-sm focus:outline-none focus:border-primary/50 shadow-ambient"
           />
         </div>
@@ -149,6 +165,51 @@ export default function ConcursosPage() {
         </div>
       )}
 
+      {/* profesionales encontrados — el buscador también rastrea los análisis */}
+      {profHits.length > 0 && (
+        <section className="mb-6 bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden animate-[fadeIn_.2s_ease]">
+          <div className="px-5 py-3 bg-surface-container-high flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-primary">person_search</span>
+            <h3 className="text-micro font-bold uppercase tracking-[0.05rem] text-on-surface-variant">
+              Profesionales encontrados
+            </h3>
+            <Badge tono="info" chico>{profHits.length}</Badge>
+          </div>
+          <ul className="divide-y divide-outline-variant/10">
+            {profHits.map((h) => (
+              <li key={`${h.job_id}-${h.n_prof}`}>
+                <Link
+                  href={`/concursos/${h.concurso_id}/jobs/${h.job_id}?tab=profesionales`}
+                  className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-surface-container-high/40 transition-colors group"
+                >
+                  <div className="flex-1 min-w-[220px]">
+                    <p className="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors">
+                      {h.nombre ?? "(sin nombre)"}
+                      {h.colegiatura && (
+                        <span className="ml-2 text-xs font-mono font-normal text-outline">{h.colegiatura}</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-outline">
+                      {h.cargo ?? "—"} · {h.n_experiencias} experiencia{h.n_experiencias === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <div className="text-right min-w-[180px]">
+                    <p className="text-xs font-medium text-on-surface-variant">{h.postor ?? "—"}</p>
+                    <p className="text-nano text-outline">{h.concurso ?? "—"}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-nano font-semibold ${JOB_ESTADO_UI[h.estado_job].cls}`}>
+                    {JOB_ESTADO_UI[h.estado_job].label}
+                  </span>
+                  <span className="material-symbols-outlined text-base text-outline group-hover:text-primary transition-colors">
+                    chevron_right
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* tabla de concursos */}
       <section className="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant/10 overflow-hidden">
         {cargando ? (
@@ -159,7 +220,11 @@ export default function ConcursosPage() {
               {filtro ? "search_off" : "gavel"}
             </span>
             {filtro ? (
-              <p className="text-sm text-outline">Sin resultados para «{filtro}».</p>
+              <p className="text-sm text-outline">
+                {profHits.length > 0
+                  ? `Ningún concurso coincide con «${filtro}» (arriba están los profesionales encontrados).`
+                  : `Sin resultados para «${filtro}».`}
+              </p>
             ) : (
               <>
                 <p className="text-sm text-on-surface-variant">Aún no hay concursos registrados.</p>
