@@ -10,3 +10,13 @@ export async function GET(
   if (!job) return NextResponse.json({ error: "job no existe" }, { status: 404 });
   return NextResponse.json(job);
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const r = db.borrarJob(id);
+  if (!r.eliminado) return NextResponse.json({ error: "job no existe" }, { status: 404 });
+  return NextResponse.json(r);
+}

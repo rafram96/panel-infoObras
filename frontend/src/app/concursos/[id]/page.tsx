@@ -9,6 +9,8 @@ import { ModalConfirmar } from "@/components/ModalConfirmar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Badge } from "@/components/Badge";
 import { SkeletonTabla, SkeletonMetricas } from "@/components/Skeleton";
+import { toast } from "@/components/Toast";
+import { usePolling } from "@/lib/pivote/usePolling";
 import {
   type ConcursoConJobs, type PivoteJob,
   ETAPAS_ORDEN, JOB_ESTADO_UI, pendientesHumano, fmtFechaHora,
@@ -45,12 +47,15 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
   }, [id]);
 
   const guardarEdicion = async () => {
-    const r = await fetch(`/api/pivote/concursos/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nomenclatura: editNom.trim() }),
-    });
-    if (r.ok) { setEditando(false); cargar(); }
+    try {
+      const r = await fetch(`/api/pivote/concursos/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nomenclatura: editNom.trim() }),
+      });
+      if (r.ok) { setEditando(false); toast("Nombre actualizado."); cargar(); }
+      else toast("No se pudo cambiar el nombre.", "error");
+    } catch { toast("No se pudo cambiar el nombre (sin conexión con el servidor).", "error"); }
   };
 
   const [jobABorrar, setJobABorrar] = useState<PivoteJob | null>(null);
@@ -58,8 +63,11 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
     const j = jobABorrar;
     if (!j) return;
     setJobABorrar(null);
-    const r = await fetch(`/api/pivote/jobs/${j.job_id}`, { method: "DELETE" });
-    if (r.ok) cargar();
+    try {
+      const r = await fetch(`/api/pivote/jobs/${j.job_id}`, { method: "DELETE" });
+      if (r.ok) { toast("Análisis eliminado."); cargar(); }
+      else toast("No se pudo borrar el análisis.", "error");
+    } catch { toast("No se pudo borrar el análisis (sin conexión con el servidor).", "error"); }
   };
 
   // puntaje técnico por postor (para comparar de un vistazo) — se re-pide solo
@@ -83,12 +91,9 @@ export default function ExpedienteConcurso({ params }: { params: Promise<{ id: s
     return () => { cancel = true; };
   }, [jobIdsKey]);
 
-  // auto-refresh: el MCP crea análisis sin pasar por el panel
-  useEffect(() => {
-    cargar();
-    const t = setInterval(cargar, 6000);
-    return () => clearInterval(t);
-  }, [cargar]);
+  // auto-refresh: el MCP crea análisis sin pasar por el panel (pausa si la pestaña no está visible)
+  useEffect(() => { cargar(); }, [cargar]);
+  usePolling(cargar, 6000);
 
   if (error) return <PanelShell title="Concurso"><p className="text-sm text-red-600">{error}</p></PanelShell>;
   if (!data) return (

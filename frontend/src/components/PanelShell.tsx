@@ -2,6 +2,7 @@
 
 import Sidebar from "./Sidebar";
 import TopNav from "./TopNav";
+import { Toaster } from "./Toast";
 
 interface PanelShellProps {
   title: string;
@@ -21,6 +22,7 @@ export default function PanelShell({
       <main className="pt-14 pb-8 md:pl-64 min-h-screen">
         <div className="px-6">{children}</div>
       </main>
+      <Toaster />
     </>
   );
 }

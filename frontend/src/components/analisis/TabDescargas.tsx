@@ -2,10 +2,11 @@
 
 /** Pestaña Descargas · los entregables del backend: Excel final, ZIP de
  *  documentos InfoObras y acceso a la cola de revisión humana. */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { PivoteJob } from "@/lib/pivote/types";
 import { BarraProgreso } from "@/components/BarraProgreso";
+import { usePolling } from "@/lib/pivote/usePolling";
 
 export function TabDescargas({ job, pend, id, jobId }: {
   job: PivoteJob; pend: number; id: string; jobId: string;
@@ -13,19 +14,14 @@ export function TabDescargas({ job, pend, id, jobId }: {
   const [avance, setAvance] = useState<{ descargadas: number; total: number; faltan: number; listo: boolean; obra_actual?: string | null } | null>(null);
   const preparando = job.descargas_estado === "pendiente" || job.descargas_estado === "en_progreso";
   // Mientras el ZIP se prepara, sondea el avance REAL por obra (no por etapas).
-  useEffect(() => {
-    if (!preparando) return;
-    let cancel = false;
-    const tick = async () => {
-      try {
-        const r = await fetch(`/api/pivote/jobs/${jobId}/descargas`);
-        if (r.ok && !cancel) setAvance(await r.json());
-      } catch { /* reintenta en el próximo tick */ }
-    };
-    tick();
-    const t = setInterval(tick, 4000);
-    return () => { cancel = true; clearInterval(t); };
-  }, [preparando, jobId]);
+  const cargarAvance = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/pivote/jobs/${jobId}/descargas`);
+      if (r.ok) setAvance(await r.json());
+    } catch { /* reintenta en el próximo tick */ }
+  }, [jobId]);
+  useEffect(() => { if (preparando) cargarAvance(); }, [preparando, cargarAvance]);
+  usePolling(cargarAvance, 4000, preparando);
   return (
     <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
       <div className="bg-surface-container-lowest p-5 rounded-xl shadow-ambient border border-outline-variant/10 flex flex-col gap-3">

@@ -22,6 +22,7 @@ import { TabAlertas } from "@/components/analisis/TabAlertas";
 import { TabFactores } from "@/components/analisis/TabFactores";
 import { TabDescargas } from "@/components/analisis/TabDescargas";
 import { fetchRetry } from "@/lib/pivote/fetchRetry";
+import { usePolling } from "@/lib/pivote/usePolling";
 
 // ── tarjeta métrica (mismo patrón del dashboard) ─────────────────────────────
 function MetricCard({ icon, label, value, accent, borde = "border-primary" }: {
@@ -63,7 +64,6 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
     window.history.replaceState(null, "", url);
   };
   const irTab = (t: TabId) => { tabTocado.current = true; setTab(t); reflejarTabEnUrl(t); };
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Pestaña inicial desde el enlace (?tab=alertas): sobrevive al F5 y es
   // compartible. Si vino explícita, cuenta como elección (no la pisa el salto
@@ -105,15 +105,13 @@ export default function JobPivote({ params }: { params: Promise<{ id: string; jo
     fetch("/api/pivote/salud").then(async (r) => { if (r.ok) setSalud(await r.json()); });
   }, [cargar]);
 
-  // polling mientras corre el pipeline O mientras se preparan las descargas del ZIP
-  // (el job ya puede estar en estado terminal pero el ZIP seguir bajándose en background)
-  useEffect(() => {
-    const descBusy = job?.descargas_estado === "pendiente" || job?.descargas_estado === "en_progreso";
-    if (job?.estado === "en_proceso" || job?.estado === "recibido" || descBusy) {
-      timerRef.current = setInterval(cargar, 2500);
-      return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }
-  }, [job?.estado, job?.descargas_estado, cargar]);
+  // Auto-refresh (pausa si la pestaña no está visible) mientras corre el pipeline
+  // O mientras se preparan las descargas del ZIP: el job ya puede estar en estado
+  // terminal pero el ZIP seguir bajándose en segundo plano.
+  const pollActivo =
+    job?.estado === "en_proceso" || job?.estado === "recibido" ||
+    job?.descargas_estado === "pendiente" || job?.descargas_estado === "en_progreso";
+  usePolling(cargar, 2500, pollActivo);
 
   // Al terminar, mostrar los Resultados (lo que el evaluador viene a ver), salvo
   // que ya haya cambiado de pestaña a mano mientras corría la verificación.

@@ -8,6 +8,8 @@ import PanelShell from "@/components/PanelShell";
 import { ModalConfirmar } from "@/components/ModalConfirmar";
 import { Badge } from "@/components/Badge";
 import { SkeletonTabla } from "@/components/Skeleton";
+import { toast } from "@/components/Toast";
+import { usePolling } from "@/lib/pivote/usePolling";
 import { type Concurso, type ProfesionalHit, JOB_ESTADO_UI, fmtFechaHora } from "@/lib/pivote/types";
 
 type ConcursoResumen = Concurso & { n_jobs: number; pendientes: number };
@@ -50,13 +52,16 @@ export default function ConcursosPage() {
   const renombrar = async (id: string) => {
     const nom = editVal.trim();
     if (!nom) { setEditId(null); return; }
-    const r = await fetch(`/api/pivote/concursos/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nomenclatura: nom }),
-    });
     setEditId(null);
-    if (r.ok) cargar();
+    try {
+      const r = await fetch(`/api/pivote/concursos/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nomenclatura: nom }),
+      });
+      if (r.ok) { toast("Nombre actualizado."); cargar(); }
+      else toast("No se pudo cambiar el nombre.", "error");
+    } catch { toast("No se pudo cambiar el nombre (sin conexión con el servidor).", "error"); }
   };
 
   const [concABorrar, setConcABorrar] = useState<ConcursoResumen | null>(null);
@@ -64,15 +69,16 @@ export default function ConcursosPage() {
     const c = concABorrar;
     if (!c) return;
     setConcABorrar(null);
-    const r = await fetch(`/api/pivote/concursos/${c.concurso_id}`, { method: "DELETE" });
-    if (r.ok) cargar();
+    try {
+      const r = await fetch(`/api/pivote/concursos/${c.concurso_id}`, { method: "DELETE" });
+      if (r.ok) { toast(`Concurso "${c.nomenclatura}" eliminado.`); cargar(); }
+      else toast("No se pudo borrar el concurso.", "error");
+    } catch { toast("No se pudo borrar el concurso (sin conexión con el servidor).", "error"); }
   };
 
-  useEffect(() => {
-    cargar();
-    const t = setInterval(cargar, 8000); // los jobs del MCP llegan solos
-    return () => clearInterval(t);
-  }, [cargar]);
+  // los jobs del MCP llegan solos; el auto-refresh se pausa si la pestaña no está visible
+  useEffect(() => { cargar(); }, [cargar]);
+  usePolling(cargar, 8000);
 
   // El mismo buscador también encuentra PROFESIONALES en todos los análisis
   // (nombre, colegiatura o cargo, sin tildes). Debounce corto para no martillar.
@@ -91,15 +97,18 @@ export default function ConcursosPage() {
 
   const crear = async () => {
     if (!nomenclatura.trim()) return;
-    const r = await fetch("/api/pivote/concursos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nomenclatura: nomenclatura.trim() }),
-    });
-    if (r.ok) {
-      setNomenclatura(""); setCreando(false);
-      cargar();
-    }
+    try {
+      const r = await fetch("/api/pivote/concursos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nomenclatura: nomenclatura.trim() }),
+      });
+      if (r.ok) {
+        setNomenclatura(""); setCreando(false);
+        toast("Concurso creado.");
+        cargar();
+      } else toast("No se pudo crear el concurso.", "error");
+    } catch { toast("No se pudo crear el concurso (sin conexión con el servidor).", "error"); }
   };
 
   const visibles = concursos

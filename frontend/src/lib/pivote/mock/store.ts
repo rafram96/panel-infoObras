@@ -349,6 +349,26 @@ export const db = {
     return { ...c, jobs: [...jobs.values()].filter((j) => j.concurso_id === id) };
   },
 
+  /** Renombra el concurso (el backend real solo edita la nomenclatura) y
+   *  propaga el nombre a los jobs, que lo llevan denormalizado. */
+  renombrarConcurso(id: string, nomenclatura: string): Concurso | null {
+    const c = concursos.find((x) => x.concurso_id === id);
+    if (!c) return null;
+    c.nomenclatura = nomenclatura;
+    for (const j of jobs.values()) if (j.concurso_id === id) j.concurso = nomenclatura;
+    return c;
+  },
+
+  /** Borra el concurso en cascada (sus jobs incluidos), como el backend real. */
+  borrarConcurso(id: string): { eliminado: boolean; analisis_eliminados: number } {
+    const idx = concursos.findIndex((x) => x.concurso_id === id);
+    if (idx < 0) return { eliminado: false, analisis_eliminados: 0 };
+    const suyos = [...jobs.values()].filter((j) => j.concurso_id === id);
+    for (const j of suyos) jobs.delete(j.job_id);
+    concursos.splice(idx, 1);
+    return { eliminado: true, analisis_eliminados: suyos.length };
+  },
+
   job(id: string): PivoteJob | null {
     const j = jobs.get(id);
     if (!j) return null;
@@ -374,6 +394,14 @@ export const db = {
     };
     jobs.set(nuevo.job_id, nuevo);
     return nuevo;
+  },
+
+  /** Borra un análisis (no su concurso), como el backend real. */
+  borrarJob(id: string): { eliminado: boolean; concurso_id: string | null } {
+    const j = jobs.get(id);
+    if (!j) return { eliminado: false, concurso_id: null };
+    jobs.delete(id);
+    return { eliminado: true, concurso_id: j.concurso_id ?? null };
   },
 
   resolverRevision(jobId: string, nProf: number, nExp: number, dato: { cui?: string; accion?: string }) {
@@ -421,6 +449,23 @@ export const db = {
 
   salud(): SaludPortal[] {
     return salud;
+  },
+
+  /** Avance de la descarga diferida (lo que arma el ZIP). En el mock los jobs
+   *  demo ya tienen el ZIP listo, así que no hay progreso que reportar. */
+  avanceDescargas(jobId: string) {
+    const j = jobs.get(jobId);
+    if (!j) return null;
+    const estado = j.descargas_estado ?? "listas";
+    return {
+      estado,
+      listo: estado === "listas",
+      total: 0,
+      descargadas: 0,
+      faltan: 0,
+      en_revision: j.items_revision.filter((it) => !it.resuelto).length,
+      obra_actual: null,
+    };
   },
 
   /** Búsqueda global de profesionales (espejo del endpoint del backend):
