@@ -1,6 +1,12 @@
 # Panel web del pivote (Next.js 15). Sirve la UI y proxyea /api/pivote/* al
 # backend on-prem según la variable PIVOTE_API (la inyecta docker-compose).
-FROM node:20-slim
+#
+# Node ANCLADO a 20.17 a propósito: el tag flotante node:20-slim bajaba 20.19+,
+# cuyo V8 rompe el `next build` de Next 15.2.4 con
+#   EvalError: Identifier 'Debug' cannot be declared with 'var'
+# 20.17 es la última buena verificada (build local pasa con ella). Al subir Next
+# (pendiente por CVE-2025-66478) se puede volver a un tag más nuevo.
+FROM node:20.17.0-slim
 
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production
