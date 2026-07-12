@@ -7,10 +7,12 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
 
 WORKDIR /app
 
-# Dependencias primero (capa cacheable). npm ci instala también devDeps, que
-# Next necesita para `next build`.
+# Dependencias primero (capa cacheable). --include=dev es OBLIGATORIO: con
+# NODE_ENV=production (arriba), `npm ci` OMITIRÍA las devDeps — pero `next build`
+# necesita typescript (para resolver los paths `@/` del tsconfig) y tailwind/
+# postcss (para el CSS). Sin ellas el build falla con "Module not found: @/...".
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --include=dev
 
 # Código del panel (sin .env.local ni node_modules — ver .dockerignore).
 COPY . .
