@@ -1,4 +1,8 @@
-import type { NextConfig } from "next";
+// Config en .mjs (NO .ts) a propósito: el cargador de config TypeScript de Next
+// bundlea+evalúa el archivo y en el `next build` dentro de Docker eso reventaba
+// con "Failed to load next.config.ts → EvalError: Identifier '…' cannot be
+// declared with 'var'". Node carga un .mjs de forma nativa (sin bundler ni eval)
+// → sin ese problema. Mismo contenido, tipado por JSDoc.
 import path from "node:path";
 
 // Backend del PIVOTE (FastAPI). Si PIVOTE_API está definida, TODAS las rutas
@@ -7,12 +11,11 @@ import path from "node:path";
 //   PIVOTE_API=http://localhost:8001 npm run dev
 const PIVOTE_API = process.env.PIVOTE_API;
 
-const config: NextConfig = {
-  // Alias @/ EXPLÍCITO, además del `paths` del tsconfig. En local (tsc/next dev)
-  // el alias de tsconfig basta, pero el `next build` de webpack dentro del
-  // contenedor Docker (Linux) no lo estaba resolviendo → "Module not found:
-  // Can't resolve '@/components/...'". Fijarlo acá lo garantiza en todo entorno.
-  // `process.cwd()` = raíz del proyecto donde corre `next build` (/app en Docker).
+/** @type {import('next').NextConfig} */
+const config = {
+  // Alias @/ EXPLÍCITO, además del `paths` del tsconfig — garantiza que el
+  // `next build` de webpack (incl. en Docker/Linux) resuelva "@/…".
+  // `process.cwd()` = raíz donde corre `next build` (/app en Docker).
   webpack: (cfg) => {
     cfg.resolve.alias = {
       ...cfg.resolve.alias,
